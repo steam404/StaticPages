@@ -894,7 +894,9 @@ async function exportData() {
   for (const r of recipes) if (r.imageId) images[r.imageId] = await imgGet(r.imageId);
   for (const m of meals) if (m.imageId) images[m.imageId] = await imgGet(m.imageId);
 
-  const payload = { version: 2, recipes, meals, settings: ui, config, images };
+  // 备份里不带 API Key，避免随手分享备份时泄露
+  const safeConfig = { ...config, ai: { ...config.ai, api_key: '' } };
+  const payload = { version: 2, recipes, meals, settings: ui, config: safeConfig, images };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
