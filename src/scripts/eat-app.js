@@ -1,4 +1,5 @@
 import { estimateDish, suggest } from '../data/dishes.js';
+import { SEED_RECIPES, SEED_COUNT } from '../data/seed-recipes.js';
 import {
   loadConfig,
   saveConfig,
@@ -336,6 +337,7 @@ async function renderLibrary() {
     <div class="chips">
       <button class="chip ${libCat === '' ? 'active' : ''}" data-action="lib-cat" data-cat="">全部</button>
       ${CATS.map(c => `<button class="chip ${libCat === c ? 'active' : ''}" data-action="lib-cat" data-cat="${c}">${c}</button>`).join('')}
+      <button class="chip" data-action="seed-import">📚 内置 ${SEED_COUNT} 道</button>
       <button class="chip chip-ai" data-action="ai-suggest">✨ 按食材推荐</button>
     </div>
     ${cards.length ? `<div class="recipe-grid">${cards.join('')}</div>` : '<p class="empty">没有匹配的菜谱</p>'}
@@ -639,6 +641,7 @@ async function openRecipeForm(id) {
 
   openModal(`
     <h2>${r ? '编辑菜谱' : '新建菜谱'}</h2>
+    ${r?.source ? `<a class="src-link" href="${esc(r.source)}" target="_blank" rel="noopener">查看参考做法 ↗</a>` : ''}
     <label>菜名<input id="r-name" type="text" value="${esc(r?.name || '')}" /></label>
     <div class="row">
       <label>分类
@@ -670,6 +673,7 @@ async function openRecipeForm(id) {
     </div>
     <label>做法<textarea id="r-steps" rows="3" placeholder="一步一行">${esc(r?.steps || '')}</textarea></label>
     <label>小贴士<input id="r-tips" type="text" value="${esc(r?.tips || '')}" placeholder="比如：番茄先炒出汁" /></label>
+    <label>参考链接<input id="r-source" type="text" value="${esc(r?.source || '')}" placeholder="https://..." /></label>
     <label class="upload">
       <input id="r-photo" type="file" accept="image/*" capture="environment" hidden />
       <span class="upload-btn">📷 ${photo ? '更换照片' : '上传照片'}</span>
@@ -1199,6 +1203,7 @@ async function saveRecipe(id) {
     ingredients: readIngredientRows(dlg),
     steps: dlg.querySelector('#r-steps').value.trim(),
     tips: dlg.querySelector('#r-tips').value.trim(),
+    source: dlg.querySelector('#r-source').value.trim(),
   };
 
   const pending = dlg.dataset.pendingPhoto;
@@ -1422,6 +1427,12 @@ document.addEventListener('click', async e => {
       libCat = el.dataset.cat;
       await render();
       break;
+    case 'seed-import': {
+      const n = importSeed(SEED_RECIPES);
+      await render();
+      toast(n ? `已导入 ${n} 道菜谱` : '内置菜谱都已在库里');
+      break;
+    }
     case 'ai-suggest':
       openAiSuggest();
       break;
@@ -1509,26 +1520,28 @@ document.addEventListener('change', e => {
   }
 });
 
+/* ============================== 内置菜谱 ============================== */
+
+function importSeed(list) {
+  const existing = new Set(recipes.map(r => r.name));
+  let added = 0;
+  for (const item of list) {
+    if (existing.has(item.name)) continue;
+    recipes.push({
+      ...item,
+      id: uid(),
+      ingredients: item.ingredients.map(i => ({ ...i })),
+    });
+    added++;
+  }
+  if (added) persist();
+  return added;
+}
+
 /* ============================== 启动 ============================== */
 
 if (recipes.length === 0) {
-  ['番茄炒蛋', '清炒时蔬', '米饭', '西红柿鸡蛋汤'].forEach(name => {
-    const est = estimateDish(name);
-    recipes.push({
-      id: uid(),
-      name,
-      cat: est.cat,
-      kcal: est.kcal,
-      p: est.p,
-      f: est.f,
-      c: est.c,
-      tags: est.tags,
-      ingredients: [],
-      steps: '',
-      createdAt: Date.now(),
-    });
-  });
-  persist();
+  importSeed(SEED_RECIPES);
 }
 
 render();
