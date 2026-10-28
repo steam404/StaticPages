@@ -1,0 +1,9 @@
+{
+  // Cloudflare Workers 静态资源托管
+  // 构建产物在 dist/，由 Workers 直接作为静态文件提供
+  "name": "staticpages",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
