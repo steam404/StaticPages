@@ -73,13 +73,28 @@ export async function aiPing(config) {
 export async function aiEstimate(config, dish) {
   const prompt = fill(config.prompts.estimate, { dish });
   const raw = await chat(config, [{ role: 'user', content: prompt }]);
-  const data = pickJSON(raw);
+  const d = pickJSON(raw);
+
+  const list = v =>
+    Array.isArray(v) ? v.map(s => String(s).trim()).filter(Boolean) : [];
+  const CATS = ['荤', '素', '汤', '主食', '甜点'];
+  const LEVELS = ['简单', '中等', '有点难'];
+
   return {
-    kcal: int(data.kcal, 300),
-    p: int(data.p, 0),
-    f: int(data.f, 0),
-    c: int(data.c, 0),
-    comment: String(data.comment || '').slice(0, 80),
+    kcal: int(d.kcal, 300),
+    p: int(d.p, 0),
+    f: int(d.f, 0),
+    c: int(d.c, 0),
+    cat: CATS.includes(d.cat) ? d.cat : '荤',
+    time: int(d.time, 0) || null,
+    difficulty: LEVELS.includes(d.difficulty) ? d.difficulty : '简单',
+    servings: Math.max(1, int(d.servings, 1)),
+    ingredients: [
+      ...list(d.main).map(name => ({ name, kind: 'main', need: true })),
+      ...list(d.aux).map(name => ({ name, kind: 'aux', need: true })),
+    ],
+    steps: list(d.steps).join('\n'),
+    tips: String(d.tips || '').slice(0, 120),
   };
 }
 

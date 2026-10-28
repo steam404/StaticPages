@@ -29,7 +29,21 @@ const loadJSON = (key, fallback) => {
 
 const saveJSON = (key, value) => localStorage.setItem(key, JSON.stringify(value));
 
-let recipes = loadJSON(LS.recipes, []);
+const normalizeIngredient = x =>
+  typeof x === 'string'
+    ? { name: x, kind: 'main', need: true }
+    : {
+        name: String(x.name || ''),
+        kind: x.kind === 'aux' ? 'aux' : 'main',
+        need: x.need !== false,
+      };
+
+const normalizeRecipe = r => ({
+  ...r,
+  ingredients: (r.ingredients || []).map(normalizeIngredient),
+});
+
+let recipes = loadJSON(LS.recipes, []).map(normalizeRecipe);
 let meals = loadJSON(LS.meals, []);
 let ui = loadJSON(LS.settings, { targetKcal: 1800, shoppingChecked: {} });
 let config = loadConfig();
@@ -324,56 +338,69 @@ async function renderLibrary() {
 
 function rangeBounds() {
   const today = todayStr();
+  if (shoppingRange === 'today') return { from: today, to: today };
   if (shoppingRange === 'week') {
     const dow = new Date(today).getDay() || 7; // 周一=1
     const monday = shiftDate(today, 1 - dow);
     return { from: monday, to: shiftDate(monday, 6) };
   }
-  if (shoppingRange === 'next7') return { from: today, to: shiftDate(today, 6) };
-  const { from, to } = ui.shoppingCustom || { from: today, to: shiftDate(today, 6) };
-  return { from, to };
+  return { from: today, to: shiftDate(today, 6) };
 }
 
 function shoppingList() {
   const { from, to } = rangeBounds();
-  const map = new Map();
+  const main = new Map();
+  const aux = new Map();
+
   for (const m of meals) {
     if (m.date < from || m.date > to) continue;
     const r = m.recipeId ? recipes.find(x => x.id === m.recipeId) : null;
     for (const ing of r?.ingredients || []) {
-      map.set(ing, (map.get(ing) || 0) + 1);
+      if (ing.need === false || !ing.name) continue;
+      const bucket = ing.kind === 'aux' ? aux : main;
+      bucket.set(ing.name, (bucket.get(ing.name) || 0) + 1);
     }
   }
-  return { items: [...map.entries()].sort((a, b) => b[1] - a[1]), from, to };
+
+  const sortDesc = map => [...map.entries()].sort((a, b) => b[1] - a[1]);
+  return { main: sortDesc(main), aux: sortDesc(aux), from, to };
+}
+
+function shopRowHTML(name, count) {
+  const checked = ui.shoppingChecked[name];
+  return `
+    <li class="${checked ? 'done' : ''}" data-action="shop-toggle" data-ing="${esc(name)}">
+      <span class="shop-box">${checked ? '✓' : ''}</span>
+      <span class="shop-name">${esc(name)}</span>
+      ${count > 1 ? `<em>×${count}</em>` : ''}
+    </li>`;
 }
 
 function renderShopping() {
-  const { items, from, to } = shoppingList();
-  const done = items.filter(([ing]) => ui.shoppingChecked[ing]).length;
+  const { main, aux, from, to } = shoppingList();
+  const total = main.length + aux.length;
+  const done = [...main, ...aux].filter(([name]) => ui.shoppingChecked[name]).length;
+
+  const group = (title, items) =>
+    items.length
+      ? `<h3>${title}<span class="muted"> · ${items.length}</span></h3>
+         <ul class="shoplist">${items.map(([n, c]) => shopRowHTML(n, c)).join('')}</ul>`
+      : '';
 
   return `
     <div class="card">
       <div class="chips">
+        <button class="chip ${shoppingRange === 'today' ? 'active' : ''}" data-action="range" data-range="today">今天</button>
         <button class="chip ${shoppingRange === 'week' ? 'active' : ''}" data-action="range" data-range="week">本周</button>
         <button class="chip ${shoppingRange === 'next7' ? 'active' : ''}" data-action="range" data-range="next7">未来 7 天</button>
       </div>
-      <p class="muted">${from} ~ ${to} · 共 ${items.length} 样，已购 ${done}</p>
+      <p class="muted">${from} ~ ${to} · ${total} 样，已购 ${done}</p>
       ${
-        items.length
-          ? `<ul class="shoplist">
-              ${items
-                .map(
-                  ([ing, count]) => `
-                <li class="${ui.shoppingChecked[ing] ? 'done' : ''}" data-action="shop-toggle" data-ing="${esc(ing)}">
-                  <span class="shop-box">${ui.shoppingChecked[ing] ? '✓' : ''}</span>
-                  <span class="shop-name">${esc(ing)}</span>
-                  ${count > 1 ? `<em>×${count}</em>` : ''}
-                </li>`,
-                )
-                .join('')}
-            </ul>
-            <button class="btn-ghost" data-action="shop-clear">清空勾选</button>`
-          : '<p class="empty">这个时间段还没有菜单。去「今天」加几道菜，菜谱里填了食材就会汇总到这里。</p>'
+        total
+          ? group('主材', main) +
+            group('辅料', aux) +
+            '<button class="btn-ghost" data-action="shop-clear">清空勾选</button>'
+          : '<p class="empty">这个时间段还没有菜单。去「今天」加几道菜，菜谱里勾了「计入采购清单」的食材会汇总到这里。</p>'
       }
     </div>
   `;
@@ -560,6 +587,38 @@ function pickListHTML(query) {
 
 /* ============================== 菜谱表单 ============================== */
 
+function ingRowHTML(ing) {
+  const kind = ing.kind === 'aux' ? 'aux' : 'main';
+  return `
+    <div class="ing-row" data-kind="${kind}">
+      <input type="checkbox" class="ing-need" ${ing.need !== false ? 'checked' : ''} title="计入采购清单" />
+      <input type="text" class="ing-name" value="${esc(ing.name)}" />
+      <button type="button" class="ing-kind" data-action="ing-kind">${kind === 'aux' ? '辅' : '主'}</button>
+      <button type="button" class="ing-del" data-action="ing-del" title="删除">×</button>
+    </div>`;
+}
+
+function ingredientRowsHTML(list) {
+  if (!list.length) return '<p class="empty">还没有食材，AI 估算会自动补上，也可以手动加。</p>';
+  return list.map(ingRowHTML).join('');
+}
+
+function appendIngredientRow(dlg, name) {
+  const list = dlg.querySelector('#r-ing-list');
+  list.querySelector('.empty')?.remove();
+  list.insertAdjacentHTML('beforeend', ingRowHTML({ name, kind: 'main', need: true }));
+}
+
+function readIngredientRows(dlg) {
+  return [...dlg.querySelectorAll('.ing-row')]
+    .map(row => ({
+      name: row.querySelector('.ing-name').value.trim(),
+      kind: row.dataset.kind === 'aux' ? 'aux' : 'main',
+      need: row.querySelector('.ing-need').checked,
+    }))
+    .filter(x => x.name);
+}
+
 async function openRecipeForm(id) {
   const r = id ? recipes.find(x => x.id === id) : null;
   const photo = r?.imageId ? await imgGet(r.imageId) : null;
@@ -587,7 +646,14 @@ async function openRecipeForm(id) {
       <label>脂肪 g<input id="r-f" type="number" min="0" step="0.1" value="${r?.f ?? ''}" /></label>
       <label>碳水 g<input id="r-c" type="number" min="0" step="0.1" value="${r?.c ?? ''}" /></label>
     </div>
-    <label>食材（逗号分隔）<input id="r-ing" type="text" value="${esc((r?.ingredients || []).join('，'))}" placeholder="番茄，鸡蛋，小葱" /></label>
+    <div class="field">
+      <span class="field-label">食材 <em>勾选＝计入采购清单</em></span>
+      <div class="ing-list" id="r-ing-list">${ingredientRowsHTML(r?.ingredients || [])}</div>
+      <div class="ing-add">
+        <input id="r-ing-input" type="text" placeholder="加一样，回车确认" />
+        <button class="btn-ghost" data-action="ing-add">添加</button>
+      </div>
+    </div>
     <label>做法<textarea id="r-steps" rows="3" placeholder="一步一行">${esc(r?.steps || '')}</textarea></label>
     <label>小贴士<input id="r-tips" type="text" value="${esc(r?.tips || '')}" placeholder="比如：番茄先炒出汁" /></label>
     <label class="upload">
@@ -624,6 +690,16 @@ async function openRecipeForm(id) {
     if (!dlg.querySelector('#r-f').value) dlg.querySelector('#r-f').value = est.f;
     if (!dlg.querySelector('#r-c').value) dlg.querySelector('#r-c').value = est.c;
   });
+
+  const ingInput = dlg.querySelector('#r-ing-input');
+  ingInput.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = ingInput.value.trim();
+    if (!v) return;
+    appendIngredientRow(dlg, v);
+    ingInput.value = '';
+  });
 }
 
 /* ============================== AI 操作 ============================== */
@@ -655,11 +731,20 @@ async function estimateRecipeWithAi() {
 
   await runAi(dlg.querySelector('[data-action="ai-estimate-recipe"]'), async () => {
     const r = await aiEstimate(config, name);
+
     dlg.querySelector('#r-kcal').value = r.kcal;
     dlg.querySelector('#r-p').value = r.p;
     dlg.querySelector('#r-f').value = r.f;
     dlg.querySelector('#r-c').value = r.c;
-    toast(`AI：${r.kcal} kcal${r.comment ? ' · ' + r.comment : ''}`);
+    dlg.querySelector('#r-cat').value = r.cat;
+    dlg.querySelector('#r-diff').value = r.difficulty;
+    dlg.querySelector('#r-servings').value = r.servings;
+    if (r.time) dlg.querySelector('#r-time').value = r.time;
+    dlg.querySelector('#r-steps').value = r.steps || '';
+    dlg.querySelector('#r-tips').value = r.tips || '';
+    dlg.querySelector('#r-ing-list').innerHTML = ingredientRowsHTML(r.ingredients);
+
+    toast(`AI 已填好：${r.kcal} kcal、${r.ingredients.length} 样食材${r.steps ? '、做法' : ''}`);
   });
 }
 
@@ -951,11 +1036,7 @@ async function saveRecipe(id) {
     time: num(dlg.querySelector('#r-time').value, 0) || null,
     difficulty: dlg.querySelector('#r-diff').value,
     servings: num(dlg.querySelector('#r-servings').value, 1),
-    ingredients: dlg
-      .querySelector('#r-ing')
-      .value.split(/[,，、]/)
-      .map(s => s.trim())
-      .filter(Boolean),
+    ingredients: readIngredientRows(dlg),
     steps: dlg.querySelector('#r-steps').value.trim(),
     tips: dlg.querySelector('#r-tips').value.trim(),
   };
@@ -1156,6 +1237,27 @@ document.addEventListener('click', async e => {
         await render();
       }
       break;
+    case 'ing-add': {
+      const dlg = modal();
+      const input = dlg.querySelector('#r-ing-input');
+      const v = input.value.trim();
+      if (!v) return toast('先写个食材名');
+      appendIngredientRow(dlg, v);
+      input.value = '';
+      input.focus();
+      break;
+    }
+    case 'ing-del':
+      el.closest('.ing-row')?.remove();
+      break;
+    case 'ing-kind': {
+      const row = el.closest('.ing-row');
+      if (!row) break;
+      const next = row.dataset.kind === 'aux' ? 'main' : 'aux';
+      row.dataset.kind = next;
+      el.textContent = next === 'aux' ? '辅' : '主';
+      break;
+    }
     case 'lib-cat':
       libCat = el.dataset.cat;
       await render();

@@ -860,4 +860,99 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     opacity: 0.6;
     cursor: default;
   }
+
+  /* ---------- 食材清单编辑器 ---------- */
+
+  #eat-modal .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  #eat-modal .field-label {
+    font-size: 0.84rem;
+    color: var(--muted);
+  }
+
+  #eat-modal .field-label em {
+    font-style: normal;
+    font-size: 0.75rem;
+    opacity: 0.75;
+    margin-left: 0.3rem;
+  }
+
+  #eat-modal .ing-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  #eat-modal .ing-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  #eat-modal .ing-row .ing-need {
+    width: auto;
+    flex: none;
+    accent-color: var(--accent);
+  }
+
+  #eat-modal .ing-row .ing-name {
+    flex: 1;
+    font-size: 0.88rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  #eat-modal .ing-kind {
+    flex: none;
+    width: 1.9rem;
+    height: 1.9rem;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  #eat-modal .ing-row[data-kind='aux'] .ing-kind {
+    border-color: #c9a227;
+    color: #c9a227;
+  }
+
+  #eat-modal .ing-del {
+    flex: none;
+    width: 1.6rem;
+    height: 1.6rem;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  #eat-modal .ing-del:hover {
+    color: #d9534f;
+  }
+
+  #eat-modal .ing-add {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  #eat-modal .ing-add input {
+    flex: 1;
+  }
+
+  #eat-modal .ing-add button {
+    flex: none;
+  }
+
+  .eat .card h3 .muted {
+    font-size: 0.78rem;
+    font-weight: 400;
+  }
 </style>

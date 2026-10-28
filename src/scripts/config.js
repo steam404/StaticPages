@@ -17,9 +17,11 @@ export const DEFAULT_CONFIG = {
   },
   prompts: {
     estimate: [
-      '你是营养师。估算这道菜「{dish}」每份的营养，只输出 JSON，不要解释。',
-      '格式：{"kcal": 数字, "p": 数字, "f": 数字, "c": 数字, "comment": "20字以内点评"}',
-      'p/f/c 分别是蛋白质/脂肪/碳水化合物，单位克。',
+      '你是中餐厨师兼营养师。针对菜「{dish}」，只输出 JSON，不要解释、不要 markdown。',
+      '格式：{"kcal":每份热量, "p":蛋白克, "f":脂肪克, "c":碳水克,',
+      '"cat":"荤|素|汤|主食|甜点", "time":用时分钟, "difficulty":"简单|中等|有点难", "servings":几人份,',
+      '"main":["主材，带用量，如 番茄 2 个"], "aux":["辅料或调料，如 生抽 1 勺"],',
+      '"steps":["步骤一","步骤二","步骤三"], "tips":"一条关键注意事项"}',
     ].join('\n'),
     advice: [
       '你是营养师。以下是某人今天吃的菜：',
@@ -118,7 +120,14 @@ export function loadConfig() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return structuredClone(DEFAULT_CONFIG);
-    return mergeConfig(JSON.parse(raw));
+    const merged = mergeConfig(JSON.parse(raw));
+
+    // 旧版提示词只返回热量，没有做法/食材。
+    // 检测到旧的就换回新版默认值，避免升级后 AI 还是旧格式。
+    if (!merged.prompts.estimate.includes('"steps"')) {
+      merged.prompts = structuredClone(DEFAULT_CONFIG.prompts);
+    }
+    return merged;
   } catch {
     return structuredClone(DEFAULT_CONFIG);
   }
