@@ -137,13 +137,16 @@ const num = (v, fb = 0) => {
 };
 
 const SLOTS = [
-  { key: 'breakfast', label: '早餐' },
-  { key: 'lunch', label: '午餐' },
-  { key: 'dinner', label: '晚餐' },
-  { key: 'snack', label: '加餐' },
+  { key: 'breakfast', label: '🌅 早餐' },
+  { key: 'lunch', label: '☀️ 午餐' },
+  { key: 'dinner', label: '🌙 晚餐' },
+  { key: 'snack', label: '🍪 加餐' },
 ];
 
 const CATS = ['荤', '素', '汤', '主食', '甜点'];
+
+const CAT_EMOJI = { 荤: '🍖', 素: '🥬', 汤: '🍲', 主食: '🍚', 甜点: '🍰' };
+const ALL_EMOJI = '🍽️';
 
 /** 按菜名生成下厨房搜索链接，作为默认参考 */
 const referenceLink = name =>
@@ -339,9 +342,8 @@ async function renderLibrary() {
       <button class="btn-primary" data-action="recipe-new">+ 新建</button>
     </div>
     <div class="chips">
-      <button class="chip ${libCat === '' ? 'active' : ''}" data-action="lib-cat" data-cat="">全部</button>
-      ${CATS.map(c => `<button class="chip ${libCat === c ? 'active' : ''}" data-action="lib-cat" data-cat="${c}">${c}</button>`).join('')}
-      <button class="chip" data-action="seed-import">📚 内置 ${SEED_COUNT} 道</button>
+      <button class="chip ${libCat === '' ? 'active' : ''}" data-action="lib-cat" data-cat="">${ALL_EMOJI} 全部</button>
+      ${CATS.map(c => `<button class="chip ${libCat === c ? 'active' : ''}" data-action="lib-cat" data-cat="${c}">${CAT_EMOJI[c]} ${c}</button>`).join('')}
       <button class="chip chip-ai" data-action="ai-suggest">✨ 按食材推荐</button>
     </div>
     ${cards.length ? `<div class="recipe-grid">${cards.join('')}</div>` : '<p class="empty">没有匹配的菜谱</p>'}
@@ -1054,6 +1056,12 @@ function openSettings() {
       <button class="btn-ghost" data-action="import">导入备份</button>
     </div>
 
+    <hr />
+    <h3 class="sec">菜谱库</h3>
+    <div class="modal-actions" style="justify-content:flex-start">
+      <button class="btn-ghost" data-action="seed-import">📚 导入内置 ${SEED_COUNT} 道</button>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-ghost" data-action="modal-close">取消</button>
       <button class="btn-primary" data-action="settings-save">保存</button>
@@ -1441,7 +1449,9 @@ document.addEventListener('click', async e => {
       await render();
       break;
     case 'seed-import': {
+      closeModal();
       const n = importSeed(SEED_RECIPES);
+      view = 'library';
       await render();
       toast(n ? `已导入 ${n} 道菜谱` : '内置菜谱都已在库里');
       break;
