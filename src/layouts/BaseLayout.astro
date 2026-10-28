@@ -1,0 +1,57 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  isPost?: boolean;
+}
+
+const {
+  title,
+  description = '记录学习、思考与折腾的地方。',
+  isPost = false,
+} = Astro.props;
+
+const siteName = '我的博客';
+const pageTitle = isPost ? `${title} · ${siteName}` : title;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate" type="application/rss+xml" title={siteName} href="/rss.xml" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={isPost ? 'article' : 'website'} />
+    <meta name="generator" content={Astro.generator} />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">{siteName}</a>
+      <nav>
+        <a href="/">文章</a>
+        <a href="/about/">关于</a>
+        <a href="/rss.xml">RSS</a>
+      </nav>
+    </header>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        © {new Date().getFullYear()}
+        {siteName} · 用 <a href="https://astro.build" rel="noopener">Astro</a> 构建
+      </p>
+    </footer>
+  </body>
+</html>

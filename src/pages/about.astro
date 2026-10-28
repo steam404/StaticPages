@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="关于" description="关于我和这个站点。">
+  <article class="post">
+    <header>
+      <h1>关于</h1>
+    </header>
+
+    <div class="prose">
+      <p>
+        我是 XXX，目前在做 ...。这个站点用来记录我的学习笔记、项目复盘和一些零散的想法。
+      </p>
+
+      <h2>联系我</h2>
+      <ul>
+        <li>邮箱：<a href="mailto:hi@example.com">hi@example.com</a></li>
+        <li>GitHub：<a href="https://github.com/yourname" rel="noopener">@yourname</a></li>
+      </ul>
+
+      <h2>关于本站</h2>
+      <p>
+        用 <a href="https://astro.build" rel="noopener">Astro</a> 搭建，部署在 Cloudflare Pages。
+        没有追踪脚本，没有广告，文章以 Markdown 写作、Git 管理。
+      </p>
+    </div>
+  </article>
+
+  <p class="back"><a href="/">← 返回首页</a></p>
+</BaseLayout>

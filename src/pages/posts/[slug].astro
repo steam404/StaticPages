@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { posts, formatDate } from '../../lib/posts';
+
+export function getStaticPaths() {
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { title, description, pubDate, tags = [] } = post.data;
+const Content = post.Content;
+---
+
+<BaseLayout title={title} description={description || title} isPost>
+  <article class="post">
+    <header>
+      <h1>{title}</h1>
+      <div class="meta">
+        <time datetime={formatDate(pubDate)}>{formatDate(pubDate)}</time>
+        {
+          tags.map((tag) => (
+            <span class="tag">{tag}</span>
+          ))
+        }
+      </div>
+    </header>
+
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+
+  <p class="back"><a href="/">← 返回首页</a></p>
+</BaseLayout>

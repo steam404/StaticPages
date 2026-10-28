@@ -1,0 +1,38 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { posts, formatDate } from '../lib/posts';
+---
+
+<BaseLayout title="我的博客" description="记录学习、思考与折腾的地方。">
+  <section class="intro">
+    <h1>你好，我是 XXX</h1>
+    <p>这里放我写的东西：技术笔记、读书摘记、以及一些没想明白的问题。</p>
+  </section>
+
+  <ul class="post-list">
+    {
+      posts.map((post) => (
+        <li>
+          <a href={post.url}>
+            <h2>{post.data.title}</h2>
+            {post.data.description && <p>{post.data.description}</p>}
+          </a>
+          <div class="meta">
+            <time datetime={formatDate(post.data.pubDate)}>{formatDate(post.data.pubDate)}</time>
+            {(post.data.tags ?? []).map((tag) => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+
+  {
+    posts.length === 0 && (
+      <p>
+        还没有文章，去 <code>src/posts/</code> 里新建一个 .md 文件吧。
+      </p>
+    )
+  }
+</BaseLayout>

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# 绑定域名后可以加上这一行（记得改成真实域名）
+# Sitemap: https://example.com/sitemap-index.xml
