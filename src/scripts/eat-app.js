@@ -8,7 +8,7 @@ import {
   DEFAULT_CONFIG,
   isAiReady,
 } from './config.js';
-import { aiAdvice, aiEstimate, aiPing, aiSuggest, AiError } from './ai.js';
+import { aiAdvice, aiEstimate, aiPing, aiRecognize, aiSuggest, AiError } from './ai.js';
 
 /* ============================== 存储 ============================== */
 
@@ -46,6 +46,8 @@ const normalizeRecipe = r => ({
 let recipes = loadJSON(LS.recipes, []).map(normalizeRecipe);
 let meals = loadJSON(LS.meals, []);
 let ui = loadJSON(LS.settings, { targetKcal: 1800, shoppingChecked: {} });
+// 旧版本存的设置可能没有 shoppingChecked，补上免得采购页崩
+ui = { targetKcal: 1800, ...ui, shoppingChecked: { ...(ui.shoppingChecked || {}) } };
 let config = loadConfig();
 
 const persist = () => {
@@ -266,6 +268,7 @@ async function renderToday() {
         <button class="btn-ghost" data-action="ai-advice" data-date="${currentDate}" ${aiBusy ? 'disabled' : ''}>
           ${aiBusy ? '思考中…' : advice ? '🔄 重新点评' : '✨ AI 点评今天'}
         </button>
+        <button class="btn-ghost" data-action="photo-import" ${aiBusy ? 'disabled' : ''}>📷 拍照记一餐</button>
         ${aiReady ? '' : '<span class="hint">（先在设置里填 API Key）</span>'}
       </div>
     </div>
@@ -475,10 +478,16 @@ const app = () => document.getElementById('eat-app');
 async function render() {
   const el = app();
   if (!el) return;
-  if (view === 'today') el.innerHTML = await renderToday();
-  else if (view === 'library') el.innerHTML = await renderLibrary();
-  else if (view === 'shopping') el.innerHTML = renderShopping();
-  else el.innerHTML = renderStats();
+
+  try {
+    if (view === 'today') el.innerHTML = await renderToday();
+    else if (view === 'library') el.innerHTML = await renderLibrary();
+    else if (view === 'shopping') el.innerHTML = renderShopping();
+    else el.innerHTML = renderStats();
+  } catch (err) {
+    console.error('[eat] 渲染失败', err);
+    el.innerHTML = `<p class="empty">这一页渲染出错了：${esc(err.message)}。刷新页面试试，或把这条消息发给 AI。</p>`;
+  }
 
   document.querySelectorAll('[data-tab]').forEach(t => t.classList.toggle('active', t.dataset.tab === view));
 }
@@ -763,8 +772,7 @@ async function estimateMealWithAi(slot) {
   });
 }
 
-async function adviseToday(date, btn) {
-  const dayMeals = mealsOn(date);
+async function adviseToday(date, btn) {  const dayMeals = mealsOn(date);
   if (!dayMeals.length) return toast('今天还没记录');
   const s = scoreDay(dayMeals);
 
@@ -780,6 +788,108 @@ async function adviseToday(date, btn) {
     adviceCache[date] = res;
     render();
   });
+}
+
+/* ---------- 拍照识别 ---------- */
+
+function photoImport() {
+  if (!isAiReady(config)) {
+    toast('先在「设置」里填 API Key');
+    openSettings();
+    return;
+  }
+
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+
+    toast('AI 正在看照片…');
+    aiBusy = true;
+    try {
+      const dataUrl = await compressImage(file, 900, 0.7);
+      const list = await aiRecognize(config, dataUrl);
+      if (!list.length) throw new AiError('没认出来，换张清楚点的照片');
+      openRecognizeModal(list, dataUrl);
+    } catch (err) {
+      toast(err instanceof AiError ? err.message : '识别失败');
+    } finally {
+      aiBusy = false;
+      await render();
+    }
+  };
+
+  input.click();
+}
+
+function openRecognizeModal(list, photo) {
+  openModal(`
+    <h2>识别到 ${list.length} 道</h2>
+    <img class="recognized-photo" src="${photo}" alt="这餐的照片" />
+    <p class="hint">取消勾选不要的，然后选餐次加入「${humanDate(currentDate)}」。</p>
+    <div class="pick-list">
+      ${list
+        .map(
+          (x, i) => `
+        <label class="pick">
+          <input type="checkbox" class="rec-check" data-idx="${i}" checked />
+          <span>${esc(x.name)}</span>
+          <em>${x.kcal} kcal</em>
+        </label>`,
+        )
+        .join('')}
+    </div>
+    <label>加到
+      <select id="rec-slot">
+        ${SLOTS.map(s => `<option value="${s.key}" ${s.key === 'lunch' ? 'selected' : ''}>${s.label}</option>`).join('')}
+      </select>
+    </label>
+    <div class="modal-actions">
+      <button class="btn-ghost" data-action="modal-close">取消</button>
+      <button class="btn-primary" data-action="rec-add">加入</button>
+    </div>
+  `);
+
+  modal().dataset.recognized = JSON.stringify(list);
+}
+
+function addRecognized() {
+  const dlg = modal();
+  const list = JSON.parse(dlg.dataset.recognized || '[]');
+  const slot = dlg.querySelector('#rec-slot').value;
+  const picked = [...dlg.querySelectorAll('.rec-check')]
+    .filter(c => c.checked)
+    .map(c => list[Number(c.dataset.idx)])
+    .filter(Boolean);
+
+  if (!picked.length) return toast('一道都没选');
+
+  for (const it of picked) {
+    meals.push({
+      id: uid(),
+      date: currentDate,
+      slot,
+      servings: 1,
+      name: it.name,
+      kcal: it.kcal,
+      p: it.p,
+      f: it.f,
+      c: it.c,
+      cat: it.cat,
+      tags: [],
+      source: 'ai-photo',
+      match: 'ai',
+    });
+  }
+
+  persist();
+  closeModal();
+  render();
+  toast(`已加入 ${picked.length} 道`);
 }
 
 function openAiSuggest() {
@@ -862,6 +972,7 @@ function openSettings() {
       <label>温度<input id="s-temp" type="number" min="0" max="2" step="0.1" value="${c.ai.temperature}" /></label>
     </div>
     <label>API Key<input id="s-key" type="password" value="${esc(c.ai.api_key)}" placeholder="sk-..." autocomplete="off" /></label>
+    <label>识图模型（拍照识别用，留空＝用上面的模型）<input id="s-vmodel" type="text" value="${esc(c.ai.vision_model || '')}" placeholder="比如 deepseek-vl2" /></label>
 
     <details>
       <summary>提示词（可改）</summary>
@@ -899,6 +1010,7 @@ function saveSettings() {
       enabled: dlg.querySelector('#s-ai-on').checked ? 'true' : 'false',
       base_url: dlg.querySelector('#s-base').value.trim(),
       model: dlg.querySelector('#s-model').value.trim(),
+      vision_model: dlg.querySelector('#s-vmodel').value.trim(),
       api_key: dlg.querySelector('#s-key').value.trim(),
       temperature: dlg.querySelector('#s-temp').value,
     },
@@ -1276,6 +1388,12 @@ document.addEventListener('click', async e => {
       break;
     case 'ai-estimate-recipe':
       await estimateRecipeWithAi();
+      break;
+    case 'photo-import':
+      photoImport();
+      break;
+    case 'rec-add':
+      addRecognized();
       break;
     case 'ai-test':
       await testAi(el);

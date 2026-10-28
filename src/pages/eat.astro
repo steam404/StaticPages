@@ -955,4 +955,31 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     font-size: 0.78rem;
     font-weight: 400;
   }
+
+  /* ---------- 拍照识别 ---------- */
+
+  #eat-modal img.recognized-photo {
+    width: 100%;
+    max-height: 10rem;
+    object-fit: cover;
+    border-radius: 10px;
+  }
+
+  #eat-modal label.pick {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    color: var(--fg);
+  }
+
+  #eat-modal label.pick input[type='checkbox'] {
+    width: auto;
+    flex: none;
+    accent-color: var(--accent);
+  }
+
+  #eat-modal label.pick span {
+    flex: 1;
+  }
 </style>

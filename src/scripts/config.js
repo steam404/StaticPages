@@ -11,6 +11,7 @@ export const DEFAULT_CONFIG = {
     enabled: true,
     base_url: 'https://api.deepseek.com/v1',
     model: 'deepseek-v4.1-flash',
+    vision_model: '',
     api_key: '',
     temperature: 0.3,
     timeout_ms: 30000,
@@ -32,6 +33,12 @@ export const DEFAULT_CONFIG = {
     suggest: [
       '我有这些食材：{ingredients}',
       '推荐 3 道能做的家常菜，只输出 JSON 数组：[{"name":"菜名","kcal":数字,"reason":"一句话"}]',
+    ].join('\n'),
+    vision: [
+      '你在看一张饭菜照片。识别画面里所有能吃的东西，按一人份估算营养。',
+      '只输出 JSON 数组，不要解释、不要 markdown：',
+      '[{"name":"菜名","kcal":数字,"p":数字,"f":数字,"c":数字,"cat":"荤|素|汤|主食|甜点"}]',
+      '看不清就把这道菜写「看不清的菜」，不要瞎猜细节。',
     ].join('\n'),
   },
 };
@@ -101,12 +108,13 @@ export function mergeConfig(parsed) {
   if ('enabled' in ai) cfg.ai.enabled = String(ai.enabled).toLowerCase() !== 'false';
   if (ai.base_url) cfg.ai.base_url = ai.base_url;
   if (ai.model) cfg.ai.model = ai.model;
+  if ('vision_model' in ai) cfg.ai.vision_model = ai.vision_model;
   if ('api_key' in ai) cfg.ai.api_key = ai.api_key;
   if (ai.temperature) cfg.ai.temperature = Number(ai.temperature) || 0.3;
   if (ai.timeout_ms) cfg.ai.timeout_ms = Number(ai.timeout_ms) || 30000;
 
   const prompts = parsed.prompts || {};
-  for (const key of ['estimate', 'advice', 'suggest']) {
+  for (const key of ['estimate', 'advice', 'suggest', 'vision']) {
     if (prompts[key]) cfg.prompts[key] = prompts[key];
   }
   return cfg;

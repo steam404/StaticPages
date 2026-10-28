@@ -8,7 +8,7 @@ export class AiError extends Error {}
 const fill = (tpl, vars) =>
   String(tpl).replace(/\{(\w+)\}/g, (_, k) => (vars[k] === undefined ? '' : String(vars[k])));
 
-async function chat(config, messages) {
+async function chat(config, messages, modelOverride) {
   const { base_url, model, api_key, temperature, timeout_ms } = config.ai;
   const url = `${String(base_url).replace(/\/+$/, '')}/chat/completions`;
 
@@ -22,7 +22,7 @@ async function chat(config, messages) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${api_key}`,
       },
-      body: JSON.stringify({ model, messages, temperature, stream: false }),
+      body: JSON.stringify({ model: modelOverride || model, messages, temperature, stream: false }),
       signal: controller.signal,
     });
 
@@ -126,4 +126,37 @@ export async function aiSuggest(config, ingredients) {
     kcal: int(x.kcal, 300),
     reason: String(x.reason || '').slice(0, 60),
   }));
+}
+
+const CATS = ['荤', '素', '汤', '主食', '甜点'];
+
+/** 拍照识别：把图片交给视觉模型，批量返回菜名和营养 */
+export async function aiRecognize(config, imageDataUrl) {
+  const visionModel = config.ai.vision_model || config.ai.model;
+
+  const messages = [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: config.prompts.vision },
+        { type: 'image_url', image_url: { url: imageDataUrl } },
+      ],
+    },
+  ];
+
+  const raw = await chat(config, messages, visionModel);
+  const data = pickJSON(raw);
+  const list = Array.isArray(data) ? data : data.dishes || data.items || [];
+
+  return list
+    .slice(0, 12)
+    .map(x => ({
+      name: String(x.name || '').trim().slice(0, 30),
+      kcal: int(x.kcal, 250),
+      p: int(x.p, 0),
+      f: int(x.f, 0),
+      c: int(x.c, 0),
+      cat: CATS.includes(x.cat) ? x.cat : '荤',
+    }))
+    .filter(x => x.name);
 }
