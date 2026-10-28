@@ -13,7 +13,7 @@ const {
   isPost = false,
 } = Astro.props;
 
-const siteName = '我的博客';
+const siteName = '养乐多的博客';
 const pageTitle = isPost ? `${title} · ${siteName}` : title;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
 ---

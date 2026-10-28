@@ -145,6 +145,10 @@ const SLOTS = [
 
 const CATS = ['荤', '素', '汤', '主食', '甜点'];
 
+/** 按菜名生成下厨房搜索链接，作为默认参考 */
+const referenceLink = name =>
+  `https://www.xiachufang.com/search/?keyword=${encodeURIComponent(name)}`;
+
 let currentDate = todayStr();
 let view = 'today';
 let libQuery = '';
@@ -673,7 +677,7 @@ async function openRecipeForm(id) {
     </div>
     <label>做法<textarea id="r-steps" rows="3" placeholder="一步一行">${esc(r?.steps || '')}</textarea></label>
     <label>小贴士<input id="r-tips" type="text" value="${esc(r?.tips || '')}" placeholder="比如：番茄先炒出汁" /></label>
-    <label>参考链接<input id="r-source" type="text" value="${esc(r?.source || '')}" placeholder="https://..." /></label>
+    <label>参考链接（留空会自动按下厨房搜索生成）<input id="r-source" type="text" value="${esc(r?.source || '')}" placeholder="https://..." /></label>
     <label class="upload">
       <input id="r-photo" type="file" accept="image/*" capture="environment" hidden />
       <span class="upload-btn">📷 ${photo ? '更换照片' : '上传照片'}</span>
@@ -708,6 +712,10 @@ async function openRecipeForm(id) {
     if (!dlg.querySelector('#r-p').value) dlg.querySelector('#r-p').value = est.p;
     if (!dlg.querySelector('#r-f').value) dlg.querySelector('#r-f').value = est.f;
     if (!dlg.querySelector('#r-c').value) dlg.querySelector('#r-c').value = est.c;
+    const src = dlg.querySelector('#r-source');
+    if (src && !src.value.trim() && e.target.value.trim()) {
+      src.value = referenceLink(e.target.value.trim());
+    }
   });
 
   const ingInput = dlg.querySelector('#r-ing-input');
@@ -762,6 +770,9 @@ async function estimateRecipeWithAi() {
     dlg.querySelector('#r-steps').value = r.steps || '';
     dlg.querySelector('#r-tips').value = r.tips || '';
     dlg.querySelector('#r-ing-list').innerHTML = ingredientRowsHTML(r.ingredients);
+
+    const src = dlg.querySelector('#r-source');
+    if (src && !src.value.trim()) src.value = referenceLink(name);
 
     toast(`AI 已填好：${r.kcal} kcal、${r.ingredients.length} 样食材${r.steps ? '、做法' : ''}`);
   });
@@ -987,6 +998,8 @@ async function saveSuggestion(idx) {
     ingredients: [],
     steps: '',
     tips: item.reason || '',
+    source: referenceLink(item.name),
+    sourceName: '下厨房',
     createdAt: Date.now(),
   });
   persist();
@@ -1203,7 +1216,7 @@ async function saveRecipe(id) {
     ingredients: readIngredientRows(dlg),
     steps: dlg.querySelector('#r-steps').value.trim(),
     tips: dlg.querySelector('#r-tips').value.trim(),
-    source: dlg.querySelector('#r-source').value.trim(),
+    source: dlg.querySelector('#r-source').value.trim() || referenceLink(name),
   };
 
   const pending = dlg.dataset.pendingPhoto;
