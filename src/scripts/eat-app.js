@@ -1012,6 +1012,8 @@ function openSettings() {
     <label>API Key<input id="s-key" type="password" value="${esc(c.ai.api_key)}" placeholder="sk-..." autocomplete="off" /></label>
     <label>识图模型（拍照识别用，留空＝用上面的模型）<input id="s-vmodel" type="text" value="${esc(c.ai.vision_model || '')}" placeholder="比如 deepseek-vl2" /></label>
     <label>绘图模型（生成菜品配图用）<input id="s-imodel" type="text" value="${esc(c.ai.image_model || '')}" placeholder="比如 dall-e-3 / flux" /></label>
+    <label>绘图接口地址（留空＝用上面的接口）<input id="s-ibase" type="text" value="${esc(c.ai.image_base_url || '')}" placeholder="https://api.example.com/v1" /></label>
+    <label>绘图 Key（留空＝用上面的 Key）<input id="s-ikey" type="password" value="${esc(c.ai.image_api_key || '')}" autocomplete="off" /></label>
 
     <details>
       <summary>提示词（可改）</summary>
@@ -1053,6 +1055,8 @@ function saveSettings() {
       model: dlg.querySelector('#s-model').value.trim(),
       vision_model: dlg.querySelector('#s-vmodel').value.trim(),
       image_model: dlg.querySelector('#s-imodel').value.trim(),
+      image_base_url: dlg.querySelector('#s-ibase').value.trim(),
+      image_api_key: dlg.querySelector('#s-ikey').value.trim(),
       api_key: dlg.querySelector('#s-key').value.trim(),
       temperature: dlg.querySelector('#s-temp').value,
     },

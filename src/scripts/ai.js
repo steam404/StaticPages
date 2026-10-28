@@ -165,13 +165,16 @@ export async function aiRecognize(config, imageDataUrl) {  const visionModel = c
  * 走 OpenAI 兼容的 /images/generations，返回 dataURL 或图片 URL。
  */
 export async function aiGenerateImage(config, dish) {
-  const { base_url, api_key, image_model, timeout_ms } = config.ai;
+  const { base_url, api_key, image_model, image_base_url, image_api_key, timeout_ms } = config.ai;
 
   if (!image_model) {
     throw new AiError('还没填「绘图模型」，去设置里填一个（如 dall-e-3、flux、seedream）');
   }
 
-  const url = `${String(base_url).replace(/\/+$/, '')}/images/generations`;
+  // 绘图可以走独立服务：地址和 key 留空就用文本那套
+  const root = String(image_base_url || base_url || '').replace(/\/+$/, '');
+  const key = image_api_key || api_key;
+  const url = `${root}/images/generations`;
   const prompt = fill(config.prompts.image, { dish });
 
   const controller = new AbortController();
@@ -182,7 +185,7 @@ export async function aiGenerateImage(config, dish) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${api_key}`,
+        Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
         model: image_model,

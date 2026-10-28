@@ -15,6 +15,9 @@ model = deepseek-flash
 vision_model =
 # 生成菜品配图用的绘图模型，走 /images/generations，留空则不能生成
 image_model =
+# 绘图可以走独立服务：地址和 key 留空就沿用上面那套
+image_base_url =
+image_api_key =
 api_key = sk-填你自己的
 temperature = 0.3
 timeout_ms = 30000

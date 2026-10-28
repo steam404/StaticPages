@@ -13,6 +13,8 @@ export const DEFAULT_CONFIG = {
     model: 'deepseek-flash',
     vision_model: '',
     image_model: '',
+    image_base_url: '',
+    image_api_key: '',
     api_key: '',
     temperature: 0.3,
     timeout_ms: 30000,
@@ -115,6 +117,8 @@ export function mergeConfig(parsed) {
   if (ai.model) cfg.ai.model = ai.model;
   if ('vision_model' in ai) cfg.ai.vision_model = ai.vision_model;
   if ('image_model' in ai) cfg.ai.image_model = ai.image_model;
+  if ('image_base_url' in ai) cfg.ai.image_base_url = ai.image_base_url;
+  if ('image_api_key' in ai) cfg.ai.image_api_key = ai.image_api_key;
   if ('api_key' in ai) cfg.ai.api_key = ai.api_key;
   if (ai.temperature) cfg.ai.temperature = Number(ai.temperature) || 0.3;
   if (ai.timeout_ms) cfg.ai.timeout_ms = Number(ai.timeout_ms) || 30000;
