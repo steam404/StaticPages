@@ -9,6 +9,15 @@ import { posts, formatDate } from '../lib/posts';
     <p>这里放我写的东西：技术笔记、读书摘记、以及一些没想明白的问题。</p>
   </section>
 
+  <a class="eat-entry" href="/eat/">
+    <span class="eat-emoji">🍚</span>
+    <span class="eat-text">
+      <strong>养乐多在吃什么</strong>
+      <small>记录每天的菜、热量和营养</small>
+    </span>
+    <span class="eat-arrow">→</span>
+  </a>
+
   <ul class="post-list">
     {
       posts.map((post) => (
@@ -36,3 +45,50 @@ import { posts, formatDate } from '../lib/posts';
     )
   }
 </BaseLayout>
+
+<style>
+  .eat-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin: 1.6rem 0 0.5rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: inherit;
+    text-decoration: none;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+
+  .eat-entry:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+
+  .eat-emoji {
+    font-size: 1.6rem;
+    line-height: 1;
+  }
+
+  .eat-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .eat-text strong {
+    font-size: 1rem;
+  }
+
+  .eat-text small {
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+
+  .eat-arrow {
+    margin-left: auto;
+    color: var(--accent);
+    font-size: 1.1rem;
+  }
+</style>

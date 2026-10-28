@@ -1,0 +1,699 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="养乐多在吃什么" description="记录每天吃了什么、做了哪些菜，顺便看看热量和营养结构。">
+  <div class="eat">
+    <header class="eat-head">
+      <h1>养乐多在吃什么</h1>
+      <p class="eat-sub">今天吃了什么，做了哪些菜。</p>
+      <nav class="eat-tabs">
+        <button data-tab="today" class="active">今天</button>
+        <button data-tab="library">菜谱库</button>
+        <button data-tab="stats">统计</button>
+      </nav>
+    </header>
+
+    <div id="eat-app">
+      <p class="eat-loading">加载中…</p>
+    </div>
+  </div>
+
+  <dialog id="eat-modal"></dialog>
+  <div id="eat-toast" role="status"></div>
+
+  <script>
+    import '../scripts/eat-app.js';
+  </script>
+</BaseLayout>
+
+<style is:global>
+  .eat {
+    max-width: 44rem;
+    margin: 0 auto;
+  }
+
+  .eat-head {
+    padding-top: 0.5rem;
+  }
+
+  .eat-head h1 {
+    margin: 0 0 0.35rem;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .eat-sub {
+    margin: 0 0 1.2rem;
+    color: var(--muted);
+    font-size: 0.94rem;
+  }
+
+  .eat-tabs {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1.4rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.6rem;
+  }
+
+  .eat-tabs button {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.94rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .eat-tabs button.active {
+    color: #fff;
+    background: var(--accent);
+  }
+
+  .eat-loading {
+    color: var(--muted);
+  }
+
+  /* ---------- 通用控件 ---------- */
+
+  .eat .btn,
+  .eat .btn-ghost,
+  .eat .btn-primary,
+  .eat .btn-danger,
+  #eat-modal .btn-ghost,
+  #eat-modal .btn-primary,
+  #eat-modal .btn-danger {
+    font: inherit;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg);
+  }
+
+  .eat .btn:hover,
+  .eat .btn-ghost:hover,
+  #eat-modal .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .eat .btn-primary,
+  #eat-modal .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .eat .btn-danger,
+  #eat-modal .btn-danger {
+    border-color: #d9534f;
+    color: #d9534f;
+  }
+
+  .eat .card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem 1.1rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .eat .card h3 {
+    margin: 0 0 0.8rem;
+    font-size: 1rem;
+  }
+
+  .eat .empty,
+  .eat .muted {
+    color: var(--muted);
+    font-size: 0.88rem;
+  }
+
+  .eat .tag {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0 0.45rem;
+    font-size: 0.72rem;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  .eat .tag-warn {
+    border-color: #e2b08a;
+    color: #b4651d;
+  }
+
+  .eat .tag-dim {
+    border-style: dashed;
+  }
+
+  /* ---------- 日期栏 ---------- */
+
+  .eat .datebar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .eat .date-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .eat .date-main strong {
+    font-size: 1.02rem;
+  }
+
+  .eat .date-main input[type='date'] {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 0;
+    max-width: 11rem;
+  }
+
+  /* ---------- 当日汇总 ---------- */
+
+  .eat .summary {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .eat .sum-kcal {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .eat .sum-kcal .num {
+    font-size: 2.1rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eat .sum-kcal .unit {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .eat .sum-macros {
+    display: flex;
+    gap: 1rem;
+    color: var(--muted);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eat .sum-score {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    border-top: 1px dashed var(--border);
+    padding-top: 0.7rem;
+  }
+
+  .eat .score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #fff;
+    flex: none;
+  }
+
+  .eat .score-good { background: #3f8f4f; }
+  .eat .score-mid { background: #b8860b; }
+  .eat .score-bad { background: #b4451d; }
+
+  .eat .sum-score p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .eat .notes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.3rem !important;
+  }
+
+  .eat .notes em {
+    font-style: normal;
+    font-size: 0.74rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0 0.3rem;
+  }
+
+  /* ---------- 餐次 ---------- */
+
+  .eat .slot {
+    margin-bottom: 1.3rem;
+  }
+
+  .eat .slot > header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .eat .slot h3 {
+    margin: 0;
+    font-size: 0.98rem;
+  }
+
+  .eat .slot-kcal {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eat .slot header .btn-ghost {
+    margin-left: auto;
+  }
+
+  .eat .slot-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  /* ---------- 菜品条目 ---------- */
+
+  .eat .meal {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .eat .meal-photo {
+    width: 54px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex: none;
+  }
+
+  .eat .meal-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .eat .meal-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+
+  .eat .meal-title strong {
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .eat .meal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.2rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eat .meal-actions {
+    display: flex;
+    gap: 0.15rem;
+  }
+
+  .eat .icon {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.25rem;
+    border-radius: 6px;
+    color: var(--muted);
+    line-height: 1;
+  }
+
+  .eat .icon:hover {
+    background: var(--border);
+    color: var(--fg);
+  }
+
+  .eat .icon.danger:hover {
+    color: #d9534f;
+  }
+
+  /* ---------- 菜谱库 ---------- */
+
+  .eat .lib-head {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .eat .search,
+  #eat-modal .search {
+    flex: 1;
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  .eat .recipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.8rem;
+  }
+
+  .eat .recipe-open {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .eat .recipe-open:hover {
+    border-color: var(--accent);
+  }
+
+  .eat .recipe-open img,
+  .eat .recipe-open .ph {
+    display: block;
+    width: 100%;
+    height: 6.5rem;
+    object-fit: cover;
+    background: var(--code-bg);
+  }
+
+  .eat .recipe-open .ph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+  }
+
+  .eat .recipe-body {
+    padding: 0.5rem 0.6rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .eat .recipe-body strong {
+    font-size: 0.9rem;
+  }
+
+  .eat .recipe-body .muted {
+    font-size: 0.76rem;
+  }
+
+  .eat .lib-foot {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.4rem;
+    flex-wrap: wrap;
+  }
+
+  /* ---------- 统计 ---------- */
+
+  .eat .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .eat .bar-row {
+    display: grid;
+    grid-template-columns: 4.2rem 1fr 3.2rem;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .eat .bar-track {
+    height: 10px;
+    background: var(--code-bg);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .eat .bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+    min-width: 2px;
+  }
+
+  .eat .bar-val {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eat .toplist {
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .eat .toplist li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+  }
+
+  .eat .toplist em {
+    font-style: normal;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  /* ---------- 弹窗 ---------- */
+
+  #eat-modal {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    width: min(32rem, calc(100vw - 2rem));
+    max-height: 80vh;
+  }
+
+  #eat-modal::backdrop {
+    background: rgb(0 0 0 / 0.45);
+  }
+
+  #eat-modal .modal-inner {
+    padding: 1.1rem 1.2rem;
+    overflow-y: auto;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  #eat-modal h2 {
+    margin: 0 0 0.2rem;
+    font-size: 1.1rem;
+  }
+
+  #eat-modal label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.84rem;
+    color: var(--muted);
+  }
+
+  #eat-modal input,
+  #eat-modal select,
+  #eat-modal textarea {
+    font: inherit;
+    font-size: 0.92rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+    width: 100%;
+  }
+
+  #eat-modal .row {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  #eat-modal .row > label {
+    flex: 1;
+  }
+
+  #eat-modal .hint {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  #eat-modal hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    width: 100%;
+  }
+
+  #eat-modal .modal-tabs {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  #eat-modal .modal-tabs button {
+    font: inherit;
+    font-size: 0.85rem;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    cursor: pointer;
+  }
+
+  #eat-modal .modal-tabs button.active {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  #eat-modal .pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 15rem;
+    overflow-y: auto;
+    margin-top: 0.5rem;
+  }
+
+  #eat-modal .pick {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    font: inherit;
+    font-size: 0.9rem;
+    text-align: left;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+  }
+
+  #eat-modal .pick:hover {
+    border-color: var(--accent);
+  }
+
+  #eat-modal .pick em {
+    font-style: normal;
+    color: var(--muted);
+    font-size: 0.78rem;
+    flex: none;
+  }
+
+  #eat-modal .pick small {
+    color: var(--muted);
+  }
+
+  #eat-modal .modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 0.3rem;
+  }
+
+  #eat-modal .modal-close {
+    align-self: flex-start;
+  }
+
+  #eat-modal .upload {
+    cursor: pointer;
+  }
+
+  #eat-modal .upload-btn {
+    display: inline-block;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.84rem;
+    color: var(--muted);
+  }
+
+  #eat-modal .upload img {
+    margin-top: 0.5rem;
+    max-height: 9rem;
+    border-radius: 8px;
+  }
+
+  /* ---------- toast ---------- */
+
+  #eat-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 2rem;
+    transform: translate(-50%, 1rem);
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 50;
+  }
+
+  #eat-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  @media (max-width: 480px) {
+    .eat .datebar {
+      flex-wrap: wrap;
+    }
+
+    .eat .bar-row {
+      grid-template-columns: 3.6rem 1fr 2.8rem;
+    }
+  }
+</style>
