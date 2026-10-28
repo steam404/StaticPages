@@ -313,9 +313,44 @@ async function mealCard(m) {
 
 /* ============================== 菜谱库 ============================== */
 
-async function renderLibrary() {
-  const q = libQuery.trim();
-  const list = recipes.filter(r => (!q || r.name.includes(q)) && (!libCat || r.cat === libCat));
+/** 搜索用的归一化：去空白、转小写 */
+const norm = s => String(s || '').toLowerCase().replace(/\s+/g, '');
+
+/** 子序列匹配：「宫丁」能命中「宫保鸡丁」 */
+function fuzzyMatch(text, q) {
+  if (!q) return true;
+  let i = 0;
+  for (const ch of text) {
+    if (ch === q[i]) i++;
+    if (i === q.length) return true;
+  }
+  return false;
+}
+
+function matchRecipe(r, q) {
+  if (!q) return true;
+  const name = norm(r.name);
+  if (name.includes(q) || fuzzyMatch(name, q)) return true;
+
+  // 菜系、分类、贴士、食材也参与匹配（只做子串，避免太发散）
+  const others = [r.region, r.cat, r.tips, ...(r.ingredients || []).map(i => i.name)];
+  return others.some(f => norm(f).includes(q));
+}
+
+async function libraryCardsHTML() {
+  const q = norm(libQuery);
+  const list = recipes.filter(r => matchRecipe(r, q) && (!libCat || r.cat === libCat));
+
+  // 名字开头的排前面，其次名字命中，最后是其他字段命中
+  const rank = r => {
+    const n = norm(r.name);
+    if (!q) return 0;
+    if (n.startsWith(q)) return 0;
+    if (n.includes(q)) return 1;
+    if (fuzzyMatch(n, q)) return 2;
+    return 3;
+  };
+  list.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'zh'));
 
   const cards = await Promise.all(
     list.map(async r => {
@@ -330,15 +365,21 @@ async function renderLibrary() {
           }
           <div class="recipe-body">
             <strong>${esc(r.name)}</strong>
-            <span class="muted">${r.cat || '未分类'} · ${Math.round(r.kcal)} kcal${r.time ? ` · ${r.time}分钟` : ''}</span>
+            <span class="muted">${esc(r.region || r.cat || '未分类')} · ${Math.round(r.kcal)} kcal${r.time ? ` · ${r.time}分钟` : ''}</span>
           </div>
         </article>`;
     }),
   );
 
+  return cards.length
+    ? `<div class="recipe-grid">${cards.join('')}</div>`
+    : `<p class="empty">没搜到「${esc(libQuery)}」，换个词试试，或者点「+ 新建」。</p>`;
+}
+
+async function renderLibrary() {
   return `
     <div class="lib-head">
-      <input class="search" type="search" placeholder="搜索菜谱" value="${esc(libQuery)}" data-action="lib-search" />
+      <input class="search" type="search" placeholder="搜菜名 / 菜系 / 食材" value="${esc(libQuery)}" data-action="lib-search" autocomplete="off" />
       <button class="btn-primary" data-action="recipe-new">+ 新建</button>
     </div>
     <div class="chips">
@@ -346,8 +387,16 @@ async function renderLibrary() {
       ${CATS.map(c => `<button class="chip ${libCat === c ? 'active' : ''}" data-action="lib-cat" data-cat="${c}">${CAT_EMOJI[c]} ${c}</button>`).join('')}
       <button class="chip chip-ai" data-action="ai-suggest">✨ 按食材推荐</button>
     </div>
-    ${cards.length ? `<div class="recipe-grid">${cards.join('')}</div>` : '<p class="empty">没有匹配的菜谱</p>'}
+    <div id="lib-grid">${await libraryCardsHTML()}</div>
   `;
+}
+
+/** 只刷新卡片区域，不动输入框，避免打断中文输入法 */
+async function updateLibraryGrid() {
+  if (view !== 'library') return;
+  const grid = app()?.querySelector('#lib-grid');
+  if (!grid) return;
+  grid.innerHTML = await libraryCardsHTML();
 }
 
 /* ============================== 采购清单 ============================== */
@@ -582,6 +631,7 @@ function openAddMeal(slot) {
   });
 
   dlg.querySelector('[data-action="meal-search"]')?.addEventListener('input', e => {
+    if (e.isComposing) return; // 拼音未上屏时先不筛
     const box = dlg.querySelector('#pick-list');
     if (box) box.innerHTML = pickListHTML(e.target.value);
   });
@@ -1523,17 +1573,28 @@ document.addEventListener('click', async e => {
   }
 });
 
+/* ---------- 搜索：兼容中文输入法 ---------- */
+
+let composing = false;
+
+document.addEventListener('compositionstart', e => {
+  if (e.target?.dataset?.action === 'lib-search') composing = true;
+});
+
+document.addEventListener('compositionend', e => {
+  if (e.target?.dataset?.action !== 'lib-search') return;
+  composing = false;
+  libQuery = e.target.value;
+  updateLibraryGrid();
+});
+
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.action !== 'lib-search') return;
   libQuery = el.value;
-  const pos = el.selectionStart;
-  renderLibrary().then(html => {
-    if (view !== 'library') return;
-    app().innerHTML = html;
-    const next = app().querySelector('.search');
-    if (next) { next.focus(); next.setSelectionRange(pos, pos); }
-  });
+  // 拼音还没上屏时不要刷新，否则输入会被打断
+  if (composing || e.isComposing) return;
+  updateLibraryGrid();
 });
 
 document.addEventListener('change', e => {
