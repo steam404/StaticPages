@@ -81,45 +81,46 @@ draft: false
 | `public/favicon.svg` | 想换图标就替换它 |
 | `src/posts/` | 删掉三篇示例文章，写自己的 |
 
-## 部署到 Cloudflare Pages（免费，不需要备案）
+## 部署：Cloudflare Workers 静态资源
 
-1. **推到 GitHub**
+本站托管在 **Cloudflare Workers**（不是 Pages）：仓库连到 Cloudflare 的 Workers 构建，
+每次 push 到 `main` 自动构建并部署。
 
-   ```bash
-   git init
-   git add -A
-   git commit -m "init blog"
-   git branch -M main
-   git remote add origin https://github.com/<你的用户名>/<仓库名>.git
-   git push -u origin main
-   ```
+| 项目 | 值 |
+| --- | --- |
+| 线上地址 | https://imyld.top（`www.imyld.top` 同样可访问） |
+| 仓库 | https://github.com/steam404/StaticPages |
+| Cloudflare 项目名 | `staticpages` |
+| 构建命令 | `npm run build` |
+| 部署命令 | `npx wrangler deploy` |
+| 产物目录 | `dist`（由 `wrangler.jsonc` 的 `assets.directory` 指定） |
 
-2. **连接 Cloudflare**
-   登录 [Cloudflare Dashboard](https://dash.cloudflare.com/) → `Workers & Pages` → `Create` → `Pages` → `Connect to Git` → 选刚才的仓库。
+`wrangler.jsonc` 是关键文件，它告诉 Workers 把 `dist/` 当作静态资源发布；
+没有它，`npx wrangler deploy` 会报「找不到入口」。
 
-3. **构建配置**
+### 以后发文章
 
-   | 项 | 值 |
-   | --- | --- |
-   | Framework preset | `Astro` |
-   | Build command | `npm run build` |
-   | Build output directory | `dist` |
-   | 环境变量 | `NODE_VERSION` = `22.23.4` |
+```bash
+# 1. 在 src/posts/ 下新建 xxx.md（文件名即网址）
+# 2. 本地预览（可选）
+npm run build && npm run preview
+# 3. 提交并推送，Cloudflare 自动部署
+git add -A
+git commit -m "post: 文章标题"
+git push
+```
 
-   > `NODE_VERSION` 一定要设，Cloudflare 默认的 Node 版本可能低于 Astro 7 要求的 22.23.4，
-   > 不设会在构建阶段报 engines 不匹配。
+推送后 1–3 分钟自动上线。构建日志和回滚都在 Cloudflare 的
+`Workers & Pages → staticpages → 部署` 里。
 
-   点 `Save and Deploy`，一两分钟后拿到 `xxx.pages.dev` 的临时地址。
+### 换账号或换仓库时怎么重建
 
-4. **绑定自己的域名**
-   `Custom domains` → `Set up a custom domain` → 输入域名。
-   - 域名 DNS 托管在 Cloudflare 时：自动加记录，几分钟生效
-   - 否则按提示去域名商处添加 `CNAME` 记录
+1. Cloudflare → `Workers & Pages` → 创建应用程序 → 连接 Git 仓库 → 选这个仓库
+2. 项目名 `staticpages`，构建命令 `npm run build`，部署命令 `npx wrangler deploy`
+3. 若构建报 `engines` 不匹配，在项目设置里加环境变量 `NODE_VERSION=22.23.4`
+4. 部署成功后：设置 → 域和路由 → 添加自定义域 `imyld.top` 和 `www.imyld.top`
 
-5. **HTTPS**
-   Cloudflare 自动签发证书，无需操作。域名生效后打开 `https://你的域名` 确认锁图标正常。
-
-> 用 Vercel、Netlify 的流程几乎一样：连仓库、`npm run build`、产物 `dist`，同样记得指定 Node 22。
+Cloudflare 会自动为根域名做 CNAME 展平并签发证书，不需要手动加 DNS 记录。
 
 ## 常见问题
 
@@ -132,7 +133,7 @@ draft: false
   （记得把 `.npm-cache` 加进 `.gitignore`）。
 
 - **Cloudflare 构建失败，提示 engines 不匹配**
-  没设 `NODE_VERSION`。在 Pages 的环境变量里加上 `NODE_VERSION=22.23.4`。
+  没设 `NODE_VERSION`。在 Workers 项目的「设置 → 变量与机密」里加 `NODE_VERSION=22.23.4`。
 
 ## 之后可以加的东西
 
