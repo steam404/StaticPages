@@ -1,6 +1,6 @@
 /**
  * AI 客户端：OpenAI 兼容的 /chat/completions。
- * 默认指向 DeepSeek，模型名可在 config.ini 里改。
+ * 默认指向 DeepSeek，模型名可在 config.txt 里改。
  */
 
 export class AiError extends Error {}
@@ -131,8 +131,7 @@ export async function aiSuggest(config, ingredients) {
 const CATS = ['荤', '素', '汤', '主食', '甜点'];
 
 /** 拍照识别：把图片交给视觉模型，批量返回菜名和营养 */
-export async function aiRecognize(config, imageDataUrl) {
-  const visionModel = config.ai.vision_model || config.ai.model;
+export async function aiRecognize(config, imageDataUrl) {  const visionModel = config.ai.vision_model || config.ai.model;
 
   const messages = [
     {
@@ -159,4 +158,58 @@ export async function aiRecognize(config, imageDataUrl) {
       cat: CATS.includes(x.cat) ? x.cat : '荤',
     }))
     .filter(x => x.name);
+}
+
+/**
+ * 给菜品生成一张卡通配图。
+ * 走 OpenAI 兼容的 /images/generations，返回 dataURL 或图片 URL。
+ */
+export async function aiGenerateImage(config, dish) {
+  const { base_url, api_key, image_model, timeout_ms } = config.ai;
+
+  if (!image_model) {
+    throw new AiError('还没填「绘图模型」，去设置里填一个（如 dall-e-3、flux、seedream）');
+  }
+
+  const url = `${String(base_url).replace(/\/+$/, '')}/images/generations`;
+  const prompt = fill(config.prompts.image, { dish });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Number(timeout_ms) || 60000);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${api_key}`,
+      },
+      body: JSON.stringify({
+        model: image_model,
+        prompt,
+        n: 1,
+        size: '512x512',
+        response_format: 'b64_json',
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      throw new AiError(`绘图接口返回 ${res.status}${detail ? '：' + detail.slice(0, 160) : ''}`);
+    }
+
+    const data = await res.json();
+    const item = data?.data?.[0];
+
+    if (item?.b64_json) return `data:image/png;base64,${item.b64_json}`;
+    if (item?.url) return item.url;
+    throw new AiError('接口没有返回图片');
+  } catch (err) {
+    if (err instanceof AiError) throw err;
+    if (err.name === 'AbortError') throw new AiError('生成超时');
+    throw new AiError(`生成失败：${err.message}`);
+  } finally {
+    clearTimeout(timer);
+  }
 }

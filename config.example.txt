@@ -1,25 +1,28 @@
 # 养乐多在吃什么 — AI 配置模板
 #
-# 用法：复制这个文件为 config.ini，填入自己的 key，
-# 然后打开站点 →「设置」→「导入 config.ini」。
+# 用法：复制这个文件为 config.txt，填入自己的 key，
+# 然后打开站点 →「设置」→「导入 config.txt」。
 #
 # 注意：站点是纯静态的，浏览器读不到你磁盘上的文件，
 # 所以是「手动导入」一次，内容会存进浏览器本地。
-# config.ini 本身不要提交到仓库（.gitignore 已排除）。
+# config.txt 本身不要提交到仓库（.gitignore 已排除）。
 
 [ai]
 enabled = true
 base_url = https://api.deepseek.com/v1
-model = deepseek-v4.1-flash
-# 拍照识别用的视觉模型；留空表示沿用上面的 model
+model = deepseek-flash
+# 拍照识别用的视觉模型，留空表示沿用上面的 model
 vision_model =
+# 生成菜品配图用的绘图模型，走 /images/generations，留空则不能生成
+image_model =
 api_key = sk-填你自己的
 temperature = 0.3
 timeout_ms = 30000
 
 [prompts]
-# 提示词可以整段删掉，删掉就用内置默认值。
-# 换行用 \n 表示。
+# 提示词可以整段删掉，删掉就用内置默认值。换行用 \n 表示。
 estimate = 你是中餐厨师兼营养师。针对菜「{dish}」，只输出 JSON：{"kcal":数字,"p":数字,"f":数字,"c":数字,"cat":"荤|素|汤|主食|甜点","time":数字,"difficulty":"简单|中等|有点难","servings":数字,"main":["主材，带用量"],"aux":["辅料或调料"],"steps":["步骤一","步骤二"],"tips":"一条注意事项"}
 advice = 你是营养师。今天吃了：\n{dishes}\n合计 {kcal} kcal（蛋白 {p}g、脂肪 {f}g、碳水 {c}g），目标 {target} kcal。只输出 JSON：{"score":0到100,"comment":"一句话","tips":["建议1","建议2"]}
 suggest = 我有这些食材：{ingredients}。推荐 3 道能做的家常菜，只输出 JSON 数组：[{"name":"菜名","kcal":数字,"reason":"一句话"}]
+vision = 你在看一张饭菜照片。识别画面里所有能吃的东西，按一人份估算营养。只输出 JSON 数组：[{"name":"菜名","kcal":数字,"p":数字,"f":数字,"c":数字,"cat":"荤|素|汤|主食|甜点"}]
+image = 画一张「{dish}」的卡通插画，日系手绘风格，暖色调，俯视摆盘，干净背景，食物细节清晰、看起来有食欲，不要出现文字和水印。

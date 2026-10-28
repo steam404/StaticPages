@@ -6,3 +6,4 @@ dist/
 
 # 本地 AI 配置（含密钥），不要提交
 config.ini
+config.txt

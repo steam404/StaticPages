@@ -397,11 +397,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   .eat .recipe-open {
+    position: relative;
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
     cursor: pointer;
     transition: border-color 0.15s;
+  }
+
+  .eat .recipe-gen {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    width: 1.7rem;
+    height: 1.7rem;
+    border-radius: 50%;
+    border: none;
+    background: rgb(0 0 0 / 0.35);
+    color: #fff;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    backdrop-filter: blur(2px);
+  }
+
+  .eat .recipe-gen:hover {
+    background: var(--accent);
   }
 
   .eat .recipe-open:hover {

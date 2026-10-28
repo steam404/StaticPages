@@ -8,7 +8,7 @@ import {
   DEFAULT_CONFIG,
   isAiReady,
 } from './config.js';
-import { aiAdvice, aiEstimate, aiPing, aiRecognize, aiSuggest, AiError } from './ai.js';
+import { aiAdvice, aiEstimate, aiGenerateImage, aiPing, aiRecognize, aiSuggest, AiError } from './ai.js';
 
 /* ============================== 存储 ============================== */
 
@@ -315,6 +315,11 @@ async function renderLibrary() {
       return `
         <article class="recipe-open" data-action="recipe-edit" data-id="${r.id}">
           ${photo ? `<img src="${photo}" alt="${esc(r.name)}" />` : '<div class="ph">🍳</div>'}
+          ${
+            photo
+              ? ''
+              : `<button class="recipe-gen" data-action="ai-gen-card" data-id="${r.id}" title="AI 生成配图">🎨</button>`
+          }
           <div class="recipe-body">
             <strong>${esc(r.name)}</strong>
             <span class="muted">${r.cat || '未分类'} · ${Math.round(r.kcal)} kcal${r.time ? ` · ${r.time}分钟` : ''}</span>
@@ -672,6 +677,7 @@ async function openRecipeForm(id) {
     </label>
     <div class="modal-actions">
       <button class="btn-ghost" data-action="ai-estimate-recipe">✨ AI 估营养</button>
+      <button class="btn-ghost" data-action="ai-gen-recipe-image">🎨 生成配图</button>
       ${r ? `<button class="btn-danger" data-action="recipe-del" data-id="${r.id}">删除</button>` : ''}
       <button class="btn-ghost" data-action="modal-close">取消</button>
       <button class="btn-primary" data-action="recipe-save" data-id="${r?.id || ''}">保存</button>
@@ -791,6 +797,38 @@ async function adviseToday(date, btn) {  const dayMeals = mealsOn(date);
 }
 
 /* ---------- 拍照识别 ---------- */
+
+/* ---------- 生成配图 ---------- */
+
+async function generateRecipeImage() {
+  const dlg = modal();
+  const name = dlg.querySelector('#r-name').value.trim();
+  if (!name) return toast('先填菜名');
+
+  await runAi(dlg.querySelector('[data-action="ai-gen-recipe-image"]'), async () => {
+    const img = await aiGenerateImage(config, name);
+    const preview = dlg.querySelector('#r-photo-preview');
+    preview.src = img;
+    preview.hidden = false;
+    dlg.dataset.pendingPhoto = img;
+    toast('配图已生成，保存菜谱后写入');
+  });
+}
+
+async function generateCardImage(id, btn) {
+  const r = recipes.find(x => x.id === id);
+  if (!r) return;
+
+  await runAi(btn, async () => {
+    const img = await aiGenerateImage(config, r.name);
+    const imgId = uid();
+    await imgPut(imgId, img);
+    r.imageId = imgId;
+    persist();
+    await render();
+    toast('配图已生成');
+  });
+}
 
 function photoImport() {
   if (!isAiReady(config)) {
@@ -973,18 +1011,21 @@ function openSettings() {
     </div>
     <label>API Key<input id="s-key" type="password" value="${esc(c.ai.api_key)}" placeholder="sk-..." autocomplete="off" /></label>
     <label>识图模型（拍照识别用，留空＝用上面的模型）<input id="s-vmodel" type="text" value="${esc(c.ai.vision_model || '')}" placeholder="比如 deepseek-vl2" /></label>
+    <label>绘图模型（生成菜品配图用）<input id="s-imodel" type="text" value="${esc(c.ai.image_model || '')}" placeholder="比如 dall-e-3 / flux" /></label>
 
     <details>
       <summary>提示词（可改）</summary>
       <label>估算<textarea id="s-p-estimate" rows="3">${esc(c.prompts.estimate)}</textarea></label>
       <label>点评<textarea id="s-p-advice" rows="3">${esc(c.prompts.advice)}</textarea></label>
       <label>推荐<textarea id="s-p-suggest" rows="3">${esc(c.prompts.suggest)}</textarea></label>
+      <label>识图<textarea id="s-p-vision" rows="3">${esc(c.prompts.vision)}</textarea></label>
+      <label>配图<textarea id="s-p-image" rows="3">${esc(c.prompts.image)}</textarea></label>
     </details>
 
     <div class="modal-actions">
       <button class="btn-ghost" data-action="ai-test">测试连接</button>
-      <button class="btn-ghost" data-action="cfg-import">导入 config.ini</button>
-      <button class="btn-ghost" data-action="cfg-export">导出 config.ini</button>
+      <button class="btn-ghost" data-action="cfg-import">导入 config.txt</button>
+      <button class="btn-ghost" data-action="cfg-export">导出 config.txt</button>
     </div>
 
     <hr />
@@ -1011,6 +1052,7 @@ function saveSettings() {
       base_url: dlg.querySelector('#s-base').value.trim(),
       model: dlg.querySelector('#s-model').value.trim(),
       vision_model: dlg.querySelector('#s-vmodel').value.trim(),
+      image_model: dlg.querySelector('#s-imodel').value.trim(),
       api_key: dlg.querySelector('#s-key').value.trim(),
       temperature: dlg.querySelector('#s-temp').value,
     },
@@ -1018,6 +1060,8 @@ function saveSettings() {
       estimate: dlg.querySelector('#s-p-estimate').value,
       advice: dlg.querySelector('#s-p-advice').value,
       suggest: dlg.querySelector('#s-p-suggest').value,
+      vision: dlg.querySelector('#s-p-vision').value,
+      image: dlg.querySelector('#s-p-image').value,
     },
   });
 
@@ -1031,7 +1075,7 @@ function saveSettings() {
 function importConfigFile() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.ini,text/plain';
+  input.accept = '.txt,text/plain';
   input.onchange = async () => {
     const file = input.files?.[0];
     if (!file) return;
@@ -1053,10 +1097,10 @@ function exportConfigFile() {
   const blob = new Blob([toINI(config)], { type: 'text/plain' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'config.ini';
+  a.download = 'config.txt';
   a.click();
   URL.revokeObjectURL(a.href);
-  toast('已导出，放在你自己的电脑上，别提交到仓库');
+  toast('已导出 config.txt，放在自己电脑上，别提交到仓库');
 }
 
 async function testAi(btn) {
@@ -1391,6 +1435,12 @@ document.addEventListener('click', async e => {
       break;
     case 'photo-import':
       photoImport();
+      break;
+    case 'ai-gen-recipe-image':
+      await generateRecipeImage();
+      break;
+    case 'ai-gen-card':
+      await generateCardImage(el.dataset.id, el);
       break;
     case 'rec-add':
       addRecognized();
