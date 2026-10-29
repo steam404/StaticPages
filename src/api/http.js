@@ -51,14 +51,32 @@ export function safeEqual(a, b) {
 
 /* ---------------- 会话 ---------------- */
 
+/**
+ * 会话签名密钥。
+ * 优先用 SYNC_SECRET；没配时退化为从口令哈希派生，
+ * 这样只需要配一个 SYNC_PASSPHRASE_HASH 就能用。
+ */
+async function sessionSecret(env) {
+  if (env.SYNC_SECRET) return String(env.SYNC_SECRET);
+  if (env.SYNC_PASSPHRASE_HASH) return sha256Hex(`session:${env.SYNC_PASSPHRASE_HASH}`);
+  return null;
+}
+
+export const hasSessionKey = env => Boolean(env.SYNC_SECRET || env.SYNC_PASSPHRASE_HASH);
+
 export async function createSession(env) {
+  const key = await sessionSecret(env);
+  if (!key) throw new Error('缺少会话密钥');
   const exp = Date.now() + SESSION_DAYS * 24 * 3600 * 1000;
   const nonce = toHex(crypto.getRandomValues(new Uint8Array(8)));
-  const sig = await hmacHex(env.SYNC_SECRET, `${exp}.${nonce}`);
+  const sig = await hmacHex(key, `${exp}.${nonce}`);
   return `${exp}.${nonce}.${sig}`;
 }
 
 export async function readSession(request, env) {
+  const key = await sessionSecret(env);
+  if (!key) return null;
+
   const cookie = request.headers.get('cookie') || '';
   const match = cookie.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
   if (!match) return null;
@@ -67,7 +85,7 @@ export async function readSession(request, env) {
   const exp = Number(expRaw);
   if (!exp || !nonce || !sig || exp < Date.now()) return null;
 
-  const expected = await hmacHex(env.SYNC_SECRET, `${exp}.${nonce}`);
+  const expected = await hmacHex(key, `${exp}.${nonce}`);
   return safeEqual(sig, expected) ? { exp, nonce } : null;
 }
 

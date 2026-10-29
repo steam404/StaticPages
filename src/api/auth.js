@@ -13,6 +13,7 @@ import {
   clearCookie,
   readSession,
   sameOrigin,
+  hasSessionKey,
 } from './http.js';
 
 const WINDOW_MS = 15 * 60 * 1000;
@@ -42,7 +43,7 @@ async function clearAttempts(env, ip) {
 }
 
 export async function handleAuth(request, env, url) {
-  if (url.pathname.startsWith('/api/auth/') && (!env.DB || !env.SYNC_SECRET)) {
+  if (url.pathname.startsWith('/api/auth/') && (!env.DB || !hasSessionKey(env))) {
     return fail(503, '同步未配置');
   }
 
