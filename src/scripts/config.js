@@ -47,6 +47,13 @@ export const DEFAULT_CONFIG = {
       '画一张「{dish}」的卡通插画，日系手绘风格，暖色调，俯视摆盘，干净背景，',
       '食物细节清晰、看起来有食欲，不要出现文字和水印。',
     ].join('\n'),
+    news: [
+      '你是国际新闻编辑。请整理今天全球范围内最重要的 8 条新闻，用中文输出。',
+      '覆盖政治、经济、科技、社会、科学等不同领域，避免同质化。',
+      '只输出 JSON 数组，不要解释、不要 markdown：',
+      '[{"title":"标题（25字内）","summary":"一句话摘要（50字内）","source":"媒体名"}]',
+      '要求：只写你确实知道的事实；不确定的就不要写；不要编造链接。',
+    ].join('\n'),
   },
 };
 
@@ -124,7 +131,7 @@ export function mergeConfig(parsed) {
   if (ai.timeout_ms) cfg.ai.timeout_ms = Number(ai.timeout_ms) || 30000;
 
   const prompts = parsed.prompts || {};
-  for (const key of ['estimate', 'advice', 'suggest', 'vision', 'image']) {
+  for (const key of ['estimate', 'advice', 'suggest', 'vision', 'image', 'news']) {
     if (prompts[key]) cfg.prompts[key] = prompts[key];
   }
   return cfg;

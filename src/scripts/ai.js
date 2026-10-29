@@ -161,8 +161,7 @@ export async function aiRecognize(config, imageDataUrl) {  const visionModel = c
 }
 
 /**
- * 给菜品生成一张卡通配图。
- * 走 OpenAI 兼容的 /images/generations，返回 dataURL 或图片 URL。
+ * 给菜品生成一张卡通配图。 * 走 OpenAI 兼容的 /images/generations，返回 dataURL 或图片 URL。
  */
 export async function aiGenerateImage(config, dish) {
   const { base_url, api_key, image_model, image_base_url, image_api_key, timeout_ms } = config.ai;
@@ -215,4 +214,20 @@ export async function aiGenerateImage(config, dish) {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** 让模型整理今日全球新闻 */
+export async function aiNews(config) {
+  const raw = await chat(config, [{ role: 'user', content: config.prompts.news }]);
+  const data = pickJSON(raw);
+  const list = Array.isArray(data) ? data : data.news || data.items || [];
+
+  return list
+    .slice(0, 12)
+    .map(x => ({
+      title: String(x.title || '').trim().slice(0, 80),
+      summary: String(x.summary || '').trim().slice(0, 160),
+      source: String(x.source || '').trim().slice(0, 24),
+    }))
+    .filter(x => x.title);
 }

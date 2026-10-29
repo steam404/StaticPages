@@ -1,13 +1,15 @@
 /**
- * 养乐多在看什么：新闻 / 书籍 / 文章
+ * 养乐多在看什么：全球新闻 / 书籍
  *
- * - 新闻、文章：链接收藏，存 localStorage
+ * - 新闻：调用 AI 生成当日要闻，结果缓存在 localStorage，可手动刷新
  * - 书籍：TXT 上传到 IndexedDB，自动解析章节目录，带阅读进度
  */
 
 /* ============================== 小工具 ============================== */
 
 import { parseChapters } from './chapter-parser.js';
+import { loadConfig, saveConfig, isAiReady } from './config.js';
+import { aiNews } from './ai.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -92,13 +94,14 @@ async function dbDel(store, key) {
 /* ============================== 状态 ============================== */
 
 const LS = {
-  links: 'yakult.read.links',
+  news: 'yakult.read.news',
   font: 'yakult.read.font',
 };
 
-let links = loadJSON(LS.links, []);
+let newsCache = loadJSON(LS.news, { at: 0, items: [] });
+let newsBusy = false;
 let books = [];
-let tab = 'books'; // news | books | articles
+let tab = 'books'; // news | books
 let reader = null; // { meta, text, index }
 let fontSize = Number(localStorage.getItem(LS.font)) || 17;
 
@@ -199,45 +202,105 @@ function renderReader() {
   `;
 }
 
-/* ============================== 渲染：新闻 / 文章 ============================== */
+/* ============================== 渲染：全球新闻 ============================== */
 
-function renderLinks(kind) {
-  const list = links.filter(l => l.kind === kind).sort((a, b) => b.createdAt - a.createdAt);
-  const isNews = kind === 'news';
+const pad2 = n => String(n).padStart(2, '0');
 
-  const items = list
-    .map(
-      l => `
-      <li class="link-item">
-        <a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
-          <strong>${esc(l.title)}</strong>
-          ${l.note ? `<span class="muted">${esc(l.note)}</span>` : ''}
-          <span class="link-host">${esc(safeHost(l.url))}</span>
-        </a>
-        <button class="icon danger" data-action="del-link" data-id="${l.id}" title="删除">✕</button>
-      </li>`,
-    )
-    .join('');
+const fmtTime = ts => {
+  const d = new Date(ts);
+  return `${d.getMonth() + 1} 月 ${d.getDate()} 日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+
+function newsCard(n) {
+  return `
+    <article class="news-item">
+      <div class="news-head">
+        <strong>${esc(n.title)}</strong>
+        ${n.source ? `<span class="news-source">${esc(n.source)}</span>` : ''}
+      </div>
+      ${n.summary ? `<p class="news-summary">${esc(n.summary)}</p>` : ''}
+      <a class="news-search" href="https://www.bing.com/search?q=${encodeURIComponent(n.title)}" target="_blank" rel="noopener noreferrer">搜索这条 ↗</a>
+    </article>`;
+}
+
+function renderNews() {
+  const items = newsCache.items || [];
+  const ready = isAiReady(loadConfig());
 
   return `
     <div class="read-head">
-      <span class="muted">${list.length} 条</span>
-      <button class="btn-primary" data-action="add-link" data-kind="${kind}">＋ 添加${isNews ? '新闻' : '文章'}</button>
+      <span class="muted">${newsCache.at ? `更新于 ${fmtTime(newsCache.at)}` : '还没拉取'}</span>
+      <button class="btn-primary" data-action="refresh-news" ${newsBusy ? 'disabled' : ''}>
+        ${newsBusy ? '拉取中…' : '🔄 刷新'}
+      </button>
     </div>
+
     ${
-      list.length
-        ? `<ul class="link-list">${items}</ul>`
-        : `<div class="read-empty card"><p class="big">${isNews ? '📰' : '📝'}</p><p>还没有收藏。点右上角添加一条链接。</p></div>`
+      items.length
+        ? `<div class="news-list">${items.map(newsCard).join('')}</div>`
+        : `<div class="read-empty card">
+             <p class="big">🌍</p>
+             <p>${ready ? '点「刷新」，让 AI 整理今天的全球要闻。' : '先点右上角 ⚙ 填一下 API Key。'}</p>
+           </div>`
     }
+
+    <p class="news-note">内容由 AI 整理，时效性取决于所用模型是否能联网；标题未附原文链接，可点「搜索这条」自己核对。</p>
   `;
 }
 
-function safeHost(url) {
-  try {
-    return new URL(url).host.replace(/^www\./, '');
-  } catch {
-    return '';
+async function refreshNews() {
+  const config = loadConfig();
+  if (!isAiReady(config)) {
+    toast('先在 ⚙ 里填 API Key');
+    openAiSettings();
+    return;
   }
+  if (newsBusy) return;
+
+  newsBusy = true;
+  await render();
+
+  try {
+    const items = await aiNews(config);
+    if (!items.length) throw new Error('AI 没有返回可用条目');
+    newsCache = { at: Date.now(), items };
+    saveJSON(LS.news, newsCache);
+    toast(`已更新 ${items.length} 条`);
+  } catch (err) {
+    toast(err.message || '刷新失败');
+  } finally {
+    newsBusy = false;
+    await render();
+  }
+}
+
+/* ---------- AI 设置（与「吃什么」共用配置） ---------- */
+
+function openAiSettings() {
+  const c = loadConfig();
+  openModal(`
+    <h2>AI 设置</h2>
+    <label>接口地址<input id="a-base" type="text" value="${esc(c.ai.base_url)}" /></label>
+    <label>模型<input id="a-model" type="text" value="${esc(c.ai.model)}" /></label>
+    <label>API Key<input id="a-key" type="password" value="${esc(c.ai.api_key)}" autocomplete="off" /></label>
+    <p class="muted small">和「养乐多在吃什么」共用同一份本地配置。</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" data-action="modal-close">取消</button>
+      <button class="btn-primary" data-action="save-ai">保存</button>
+    </div>
+  `);
+}
+
+function saveAiSettings() {
+  const dlg = modal();
+  const c = loadConfig();
+  c.ai.base_url = dlg.querySelector('#a-base').value.trim();
+  c.ai.model = dlg.querySelector('#a-model').value.trim();
+  c.ai.api_key = dlg.querySelector('#a-key').value.trim();
+  saveConfig(c);
+  closeModal();
+  render();
+  toast('已保存');
 }
 
 /* ============================== 主渲染 ============================== */
@@ -249,7 +312,7 @@ async function render() {
   try {
     if (reader) el.innerHTML = renderReader();
     else if (tab === 'books') el.innerHTML = await renderBooks();
-    else el.innerHTML = renderLinks(tab);
+    else el.innerHTML = renderNews();
   } catch (err) {
     console.error('[read] 渲染失败', err);
     el.innerHTML = `<p class="empty">出错了：${esc(err.message)}</p>`;
@@ -382,40 +445,6 @@ async function openToc() {
   if (active) active.scrollIntoView({ block: 'center' });
 }
 
-/* ============================== 链接操作 ============================== */
-
-function openAddLink(kind) {
-  const label = kind === 'news' ? '新闻' : '文章';
-
-  openModal(`
-    <h2>添加${label}</h2>
-    <label>标题<input id="l-title" type="text" placeholder="比如：某篇值得一读的报道" /></label>
-    <label>链接<input id="l-url" type="url" placeholder="https://" /></label>
-    <label>备注（可选）<input id="l-note" type="text" placeholder="为什么想留它" /></label>
-    <div class="modal-actions">
-      <button class="btn-ghost" data-action="modal-close">取消</button>
-      <button class="btn-primary" data-action="save-link" data-kind="${kind}">保存</button>
-    </div>
-  `);
-}
-
-function saveLink(kind) {
-  const dlg = modal();
-  const title = dlg.querySelector('#l-title').value.trim();
-  let url = dlg.querySelector('#l-url').value.trim();
-  const note = dlg.querySelector('#l-note').value.trim();
-
-  if (!title) return toast('标题不能为空');
-  if (!url) return toast('链接不能为空');
-  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-
-  links.push({ id: uid(), kind, title, url, note, createdAt: Date.now() });
-  saveJSON(LS.links, links);
-  closeModal();
-  render();
-  toast('已保存');
-}
-
 /* ============================== 事件 ============================== */
 
 document.addEventListener('click', async e => {
@@ -426,6 +455,11 @@ document.addEventListener('click', async e => {
     tab = el.dataset.rtab;
     reader = null;
     await render();
+
+    // 进新闻页时，缓存超过 12 小时就自动拉一次
+    if (tab === 'news' && Date.now() - (newsCache.at || 0) > 12 * 3600 * 1000 && isAiReady(loadConfig())) {
+      refreshNews();
+    }
     return;
   }
 
@@ -480,20 +514,15 @@ document.addEventListener('click', async e => {
       if (body) body.style.fontSize = fontSize + 'px';
       break;
     }
-    case 'add-link':
-      openAddLink(el.dataset.kind);
+    case 'refresh-news':
+      await refreshNews();
       break;
-    case 'save-link':
-      saveLink(el.dataset.kind);
+    case 'open-ai-settings':
+      openAiSettings();
       break;
-    case 'del-link': {
-      const id = el.dataset.id;
-      if (!confirm('删除这条收藏？')) break;
-      links = links.filter(l => l.id !== id);
-      saveJSON(LS.links, links);
-      await render();
+    case 'save-ai':
+      saveAiSettings();
       break;
-    }
     case 'modal-close':
       closeModal();
       break;

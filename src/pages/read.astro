@@ -8,9 +8,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <h1>养乐多在看什么</h1>
       <p class="read-sub">新闻、书，还有值得留着的文章。</p>
       <nav class="read-tabs">
-        <button data-rtab="news">📰 新闻</button>
+        <button data-rtab="news">🌍 全球新闻</button>
         <button data-rtab="books" class="active">📚 书籍</button>
-        <button data-rtab="articles">📝 文章</button>
+        <button class="read-settings" data-action="open-ai-settings" title="AI 设置">⚙</button>
       </nav>
     </header>
 
@@ -397,51 +397,72 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     justify-content: flex-end;
   }
 
-  /* ---------- 新闻 / 文章 ---------- */
+  /* ---------- 全球新闻 ---------- */
 
-  .read .link-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  .read .read-settings {
+    margin-left: auto;
+    font-size: 1rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
   }
 
-  .read .link-item {
+  .read .news-list {
     display: flex;
-    align-items: center;
-    gap: 0.6rem;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .read .news-item {
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 0.7rem 0.85rem;
+    padding: 0.8rem 0.9rem;
   }
 
-  .read .link-item a {
-    flex: 1;
-    min-width: 0;
+  .read .news-head {
     display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    color: inherit;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .read .news-head strong {
+    font-size: 0.96rem;
+    line-height: 1.45;
+  }
+
+  .read .news-source {
+    font-size: 0.72rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0 0.45rem;
+    white-space: nowrap;
+  }
+
+  .read .news-summary {
+    margin: 0.35rem 0 0;
+    font-size: 0.86rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  .read .news-search {
+    display: inline-block;
+    margin-top: 0.35rem;
+    font-size: 0.76rem;
+    color: var(--accent);
     text-decoration: none;
   }
 
-  .read .link-item a:hover strong {
-    color: var(--accent);
+  .read .news-search:hover {
+    text-decoration: underline;
   }
 
-  .read .link-item strong {
-    font-size: 0.94rem;
-  }
-
-  .read .link-item .muted {
-    font-size: 0.8rem;
-  }
-
-  .read .link-host {
-    font-size: 0.72rem;
+  .read .news-note {
+    margin: 1rem 0 0;
+    font-size: 0.74rem;
     color: var(--muted);
+    line-height: 1.6;
   }
 
   /* ---------- toast ---------- */
