@@ -227,17 +227,28 @@ npx wrangler kv namespace create yakult-blobs
 npx wrangler d1 execute yakult-sync --remote --file=./schema.sql
 ```
 
-### 5. 设置两个密钥
+### 5. 写入口令哈希（只做一次）
+
+口令哈希和会话密钥都放在 **D1** 里，所以**不需要在 Cloudflare 面板里配置任何变量**，
+重新部署也不会丢——这是刻意设计的：Workers Builds 以仓库里的 `wrangler.jsonc` 为准，
+面板里加的变量会在下次构建时被覆盖。
+
+先生成哈希（把 `你的口令` 换掉）：
 
 ```powershell
-# 用你的口令生成哈希，把 你的口令 换掉后再执行
 node -e "crypto.subtle.digest('SHA-256',new TextEncoder().encode('yakult-sync:你的口令')).then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))"
-npx wrangler secret put SYNC_PASSPHRASE_HASH
-
-# 会话签名用的随机串
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-npx wrangler secret put SYNC_SECRET
 ```
+
+然后在 D1 → `yakult-sync` → Console 里执行（把哈希换成上一步的输出）：
+
+```sql
+INSERT INTO meta (k, v) VALUES ('passphrase_hash', '你的哈希')
+ON CONFLICT(k) DO UPDATE SET v = excluded.v;
+```
+
+会话签名密钥由 Worker 在首次使用时自动生成并存进 `meta.session_key`，无需干预。
+
+改口令就是再执行一次上面的 SQL（旧 cookie 会自动失效，需要重新登录）。
 
 ### 6. 部署与使用
 

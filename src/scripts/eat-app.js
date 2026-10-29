@@ -162,6 +162,8 @@ let currentDate = todayStr();
 let view = 'today';
 let libQuery = '';
 let libCat = '';
+let libPage = 1;
+const LIB_PAGE_SIZE = 10;
 let shoppingRange = 'week';
 let adviceCache = {};
 let aiBusy = false;
@@ -358,8 +360,16 @@ async function libraryCardsHTML() {
   };
   list.sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'zh'));
 
+  const total = list.length;
+  const pages = Math.max(1, Math.ceil(total / LIB_PAGE_SIZE));
+  if (libPage > pages) libPage = pages;
+  if (libPage < 1) libPage = 1;
+
+  const start = (libPage - 1) * LIB_PAGE_SIZE;
+  const pageItems = list.slice(start, start + LIB_PAGE_SIZE);
+
   const cards = await Promise.all(
-    list.map(async r => {
+    pageItems.map(async r => {
       const photo = (r.imageId ? await imgGet(r.imageId) : null) || foodImage(r.name) || null;
       return `
         <article class="recipe-open" data-action="recipe-edit" data-id="${r.id}">
@@ -377,9 +387,20 @@ async function libraryCardsHTML() {
     }),
   );
 
-  return cards.length
-    ? `<div class="recipe-grid">${cards.join('')}</div>`
-    : `<p class="empty">没搜到「${esc(libQuery)}」，换个词试试，或者点「+ 新建」。</p>`;
+  if (!cards.length) {
+    return `<p class="empty">没搜到「${esc(libQuery)}」，换个词试试，或者点「+ 新建」。</p>`;
+  }
+
+  const pager =
+    pages > 1
+      ? `<div class="lib-pager">
+           <button class="btn-ghost" data-action="lib-page" data-page="${libPage - 1}" ${libPage === 1 ? 'disabled' : ''}>← 上一页</button>
+           <span class="lib-page-info">${libPage} / ${pages} · 共 ${total} 道</span>
+           <button class="btn-ghost" data-action="lib-page" data-page="${libPage + 1}" ${libPage === pages ? 'disabled' : ''}>下一页 →</button>
+         </div>`
+      : `<p class="lib-page-info">共 ${total} 道</p>`;
+
+  return `<div class="recipe-grid">${cards.join('')}</div>${pager}`;
 }
 
 async function renderLibrary() {
@@ -1502,7 +1523,12 @@ document.addEventListener('click', async e => {
     }
     case 'lib-cat':
       libCat = el.dataset.cat;
+      libPage = 1;
       await render();
+      break;
+    case 'lib-page':
+      libPage = num(el.dataset.page, 1);
+      await updateLibraryGrid();
       break;
     case 'seed-import': {
       closeModal();
@@ -1591,6 +1617,7 @@ document.addEventListener('compositionend', e => {
   if (e.target?.dataset?.action !== 'lib-search') return;
   composing = false;
   libQuery = e.target.value;
+  libPage = 1;
   updateLibraryGrid();
 });
 
@@ -1598,6 +1625,7 @@ document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.action !== 'lib-search') return;
   libQuery = el.value;
+  libPage = 1;
   // 拼音还没上屏时不要刷新，否则输入会被打断
   if (composing || e.isComposing) return;
   updateLibraryGrid();

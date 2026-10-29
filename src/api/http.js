@@ -53,16 +53,29 @@ export function safeEqual(a, b) {
 
 /**
  * 会话签名密钥。
- * 优先用 SYNC_SECRET；没配时退化为从口令哈希派生，
- * 这样只需要配一个 SYNC_PASSPHRASE_HASH 就能用。
+ *
+ * 优先级：环境变量 SYNC_SECRET → D1 里的 session_key（首次自动生成并持久化）。
+ * 放到 D1 之后，密钥就不属于构建产物，重新部署多少次都不会丢，
+ * 也不需要每次在面板里手动加变量。
  */
+let cachedSessionKey = null;
+
 async function sessionSecret(env) {
   if (env.SYNC_SECRET) return String(env.SYNC_SECRET);
-  if (env.SYNC_PASSPHRASE_HASH) return sha256Hex(`session:${env.SYNC_PASSPHRASE_HASH}`);
-  return null;
+  if (cachedSessionKey) return cachedSessionKey;
+  if (!env.DB) return null;
+
+  let key = await getMeta(env, 'session_key');
+  if (!key) {
+    key = toHex(crypto.getRandomValues(new Uint8Array(32)));
+    await setMeta(env, 'session_key', key);
+  }
+  cachedSessionKey = key;
+  return key;
 }
 
-export const hasSessionKey = env => Boolean(env.SYNC_SECRET || env.SYNC_PASSPHRASE_HASH);
+/** 有 D1 就够了：会话密钥可以现生成，口令哈希也存在 D1 里 */
+export const hasSessionKey = env => Boolean(env.SYNC_SECRET || env.SYNC_PASSPHRASE_HASH || env.DB);
 
 export async function createSession(env) {
   const key = await sessionSecret(env);

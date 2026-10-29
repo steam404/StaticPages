@@ -14,6 +14,7 @@ import {
   readSession,
   sameOrigin,
   hasSessionKey,
+  getMeta,
 } from './http.js';
 
 const WINDOW_MS = 15 * 60 * 1000;
@@ -64,8 +65,12 @@ export async function handleAuth(request, env, url) {
     const passphrase = String(body?.passphrase || '');
     if (!passphrase) return fail(400, '口令不能为空');
 
+    // 口令哈希：环境变量优先，否则读 D1（这样不用在面板里反复配置）
+    const stored = env.SYNC_PASSPHRASE_HASH || (await getMeta(env, 'passphrase_hash'));
+    if (!stored) return fail(503, '还没设置口令，先把哈希写进 D1');
+
     const hash = await sha256Hex(`yakult-sync:${passphrase}`);
-    if (!safeEqual(hash, String(env.SYNC_PASSPHRASE_HASH || ''))) {
+    if (!safeEqual(hash, String(stored))) {
       await recordAttempt(env, ip);
       return fail(401, '口令不对');
     }
