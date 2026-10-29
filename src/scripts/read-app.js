@@ -151,7 +151,7 @@ function matchShelf(b, q) {
 
 function matchRec(r, q) {
   if (!q) return true;
-  return [r.title, r.author, r.era, r.intro, r.reason].map(normText).some(f => f.includes(q) || fuzzyHit(f, q));
+  return [r.title, r.author, r.cat, r.intro, r.reason].map(normText).some(f => f.includes(q) || fuzzyHit(f, q));
 }
 
 function bookCard(b) {
@@ -177,7 +177,7 @@ function recCard(r) {
       <summary>
         <span class="rec-head">
           <strong>${esc(r.title)}</strong>
-          <span class="muted small">${esc(r.author)} · ${esc(r.era)}</span>
+          <span class="muted small">${esc(r.author)} · ${esc(r.cat)}</span>
         </span>
         <span class="rec-intro">${esc(r.intro)}</span>
       </summary>
@@ -221,7 +221,7 @@ async function renderBooks() {
 
     <div class="chips">
       <button class="chip ${bookView === 'shelf' ? 'active' : ''}" data-action="book-view" data-view="shelf">📚 我的书架</button>
-      <button class="chip ${bookView === 'recs' ? 'active' : ''}" data-action="book-view" data-view="recs">🍶 养乐多推荐 ${REC_COUNT}</button>
+      <button class="chip ${bookView === 'recs' ? 'active' : ''}" data-action="book-view" data-view="recs">🍶 养乐多的推荐 ${REC_COUNT}</button>
     </div>
 
     <div id="book-list">${await bookListHTML()}</div>
