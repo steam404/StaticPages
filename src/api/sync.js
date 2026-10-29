@@ -7,6 +7,7 @@
  */
 
 import { json, fail, requireSession, getMeta, setMeta, sameOrigin } from './http.js';
+import { storageGetWithRetry, storagePut, storageDelete, storageReady } from './storage.js';
 
 /** R2 里保留最近几版快照，用于回滚 */
 const KEEP_VERSIONS = 3;
@@ -16,7 +17,7 @@ const currentRev = async env => Number((await getMeta(env, 'rev')) || 0);
 export async function handleSync(request, env, url) {
   if (!url.pathname.startsWith('/api/sync/')) return null;
 
-  if (!env.DB || !env.BLOBS) return fail(503, '同步未配置');
+  if (!env.DB || !storageReady(env)) return fail(503, '同步未配置');
 
   const auth = await requireSession(request, env);
   if (auth.error) return auth.error;
@@ -39,10 +40,10 @@ export async function handleSync(request, env, url) {
     const etag = (request.headers.get('if-none-match') || '').replace(/"/g, '');
     if (etag === String(rev)) return new Response(null, { status: 304 });
 
-    const obj = await env.BLOBS.get(`snapshot/${rev}.json`);
+    const obj = await storageGetWithRetry(env, `snapshot/${rev}.json`);
     if (!obj) return fail(404, '快照不存在');
 
-    const text = await obj.text();
+    const text = new TextDecoder().decode(obj.bytes);
     return json({ rev, payload: JSON.parse(text) }, { headers: { etag: `"${rev}"` } });
   }
 
@@ -70,14 +71,17 @@ export async function handleSync(request, env, url) {
     }
 
     const nextRev = rev + 1;
-    await env.BLOBS.put(`snapshot/${nextRev}.json`, JSON.stringify(payload), {
-      httpMetadata: { contentType: 'application/json' },
-    });
+    await storagePut(
+      env,
+      `snapshot/${nextRev}.json`,
+      new TextEncoder().encode(JSON.stringify(payload)),
+      'application/json',
+    );
     await setMeta(env, 'rev', nextRev);
     await setMeta(env, 'updated_at', Date.now());
 
     for (let old = nextRev - KEEP_VERSIONS; old > 0; old--) {
-      await env.BLOBS.delete(`snapshot/${old}.json`);
+      await storageDelete(env, `snapshot/${old}.json`);
     }
 
     return json({ rev: nextRev });

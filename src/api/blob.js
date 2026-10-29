@@ -1,16 +1,24 @@
 /**
  * 二进制对象：图片与书籍正文。
  * 内容寻址（key = sha256），因此同一张图/同一本书只存一份。
+ *
+ * 实际存放在哪里由 storage.js 决定：R2（若绑定）或 KV。
  */
 
 import { json, fail, requireSession, sameOrigin } from './http.js';
+import { storageGet, storagePut, storageHead, storageReady } from './storage.js';
 
 const MAX_BYTES = 25 * 1024 * 1024;
+
+const cacheHeaders = key => ({
+  'cache-control': 'public, max-age=31536000, immutable',
+  etag: `"${key}"`,
+});
 
 export async function handleBlob(request, env, url) {
   if (!url.pathname.startsWith('/api/blob/')) return null;
 
-  if (!env.BLOBS) return fail(503, '同步未配置');
+  if (!storageReady(env)) return fail(503, '同步未配置');
 
   const auth = await requireSession(request, env);
   if (auth.error) return auth.error;
@@ -21,15 +29,18 @@ export async function handleBlob(request, env, url) {
   const path = `blob/${key}`;
 
   if (request.method === 'GET' || request.method === 'HEAD') {
-    const obj = await env.BLOBS.get(path);
-    if (!obj) return fail(404, '对象不存在');
+    if (request.method === 'HEAD') {
+      const meta = await storageHead(env, path);
+      if (!meta) return fail(404, '对象不存在');
+      return new Response(null, {
+        headers: { 'content-type': meta.contentType, ...cacheHeaders(key) },
+      });
+    }
 
-    return new Response(request.method === 'HEAD' ? null : obj.body, {
-      headers: {
-        'content-type': obj.httpMetadata?.contentType || 'application/octet-stream',
-        'cache-control': 'public, max-age=31536000, immutable',
-        etag: `"${key}"`,
-      },
+    const hit = await storageGet(env, path);
+    if (!hit) return fail(404, '对象不存在');
+    return new Response(hit.bytes, {
+      headers: { 'content-type': hit.contentType, ...cacheHeaders(key) },
     });
   }
 
@@ -43,12 +54,12 @@ export async function handleBlob(request, env, url) {
     if (buf.byteLength > MAX_BYTES) return fail(413, '对象过大（上限 25 MB）');
     if (buf.byteLength === 0) return fail(400, '空对象');
 
-    await env.BLOBS.put(path, buf, {
-      httpMetadata: {
-        contentType: request.headers.get('content-type') || 'application/octet-stream',
-      },
-    });
-
+    await storagePut(
+      env,
+      path,
+      buf,
+      request.headers.get('content-type') || 'application/octet-stream',
+    );
     return json({ ok: true, size: buf.byteLength });
   }
 

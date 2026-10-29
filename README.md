@@ -178,33 +178,56 @@ Cloudflare 会自动为根域名做 CNAME 展平并签发证书，不需要手�
 
 留空就只用内置表，不联网。
 
-## 多端同步（可选，需要在 Cloudflare 上开通 D1 + R2）
+## 多端同步（可选，只需要 D1 + KV，不用绑支付方式）
 
 默认不启用：不配置时顶栏的「同步」按钮是灰点，所有数据仍然只存在本机。配置之后，同一个口令登录的设备共享同一份数据。
 
-### 1. 创建资源
+### 1. 建 D1：存版本号与登录限流
+
+网页控制台：**Storage & Databases** → **D1 SQL Database** → Create → 名字填 `yakult-sync` → 创建后复制 **Database ID**。
+
+或命令行：
 
 ```powershell
-# D1 数据库（存版本号与登录限流）
 npx wrangler d1 create yakult-sync
-
-# R2 存储桶（存快照、图片、书籍正文）
-npx wrangler r2 bucket create yakult-blobs
 ```
 
-`d1 create` 会输出 `database_id`。打开 `wrangler.jsonc`，把文件末尾那两块
-（`d1_databases` 与 `r2_buckets`）的注释去掉，并把 `REPLACE_WITH_D1_DATABASE_ID`
-换成实际 id。
+### 2. 建 KV：存快照、图片、书籍正文
+
+网页控制台：**Workers & Pages** → **KV** → Create namespace → 名字填 `yakult-blobs` → 创建后复制 **ID**。
+
+或命令行：
+
+```powershell
+npx wrangler kv namespace create yakult-blobs
+```
+
+> KV 不需要绑定支付方式，免费额度 1 GB、单个值 25 MiB。
+> 图片和书籍正文都按 sha256 存成一个值，一本书就是一个值，个人用量足够。
+
+### 3. 打开绑定
+
+打开 `wrangler.jsonc`，把末尾 `d1_databases` 与 `kv_namespaces` 两块注释去掉，
+分别填入前面拿到的两个 ID：
+
+```jsonc
+"d1_databases": [
+  { "binding": "DB", "database_name": "yakult-sync", "database_id": "你的 D1 ID" }
+],
+"kv_namespaces": [
+  { "binding": "KV", "id": "你的 KV ID" }
+]
+```
 
 这两块默认是注释状态——不配置时整站照常部署，只是顶栏「同步」显示为未启用。
 
-### 2. 建表
+### 4. 建表
 
 ```powershell
 npx wrangler d1 execute yakult-sync --remote --file=./schema.sql
 ```
 
-### 3. 设置两个密钥
+### 5. 设置两个密钥
 
 ```powershell
 # 用你的口令生成哈希，把 你的口令 换掉后再执行
@@ -216,7 +239,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 npx wrangler secret put SYNC_SECRET
 ```
 
-### 4. 部署与使用
+### 6. 部署与使用
 
 推送后 Cloudflare 会带着绑定重新部署。之后：
 
@@ -227,14 +250,20 @@ npx wrangler secret put SYNC_SECRET
 
 ### 同步了什么、没同步什么
 
-| 同步 | 不���步 |
+| 同步 | 不同步 |
 |---|---|
 | 菜谱、菜单、设置、运势、新闻缓存 | **AI 的 `api_key`**（只留在本机，换设备需重填） |
-| 做饭照片（R2） | 浏览器里的新闻/照片缓存不占本机以外的地方 |
-| 书籍正文与阅读进度（R2） | — |
+| 做饭照片（KV） | 浏览器里的新闻/照片缓存不占本机以外的地方 |
+| 书籍正文与阅读进度（KV） | — |
 
-单次上传上限 25 MB，超过的书会被跳过并在同步结果里提示。
+单次上传上限 25 MB（KV 单值限制），超过的书会被跳过并在同步结果里提示。
+
+KV 是最终一致的：刚推完立刻在另一台设备拉取，可能短暂读不到最新一版。
+服务端已经做了 4 次短重试，极端情况会提示「稍后重试」，不会写坏数据。
 
 ### 成本
 
-D1 与 R2 都在免费额度内（个人用量远低于），月费 0。
+D1 与 KV 都在免费额度内（个人用量远低于），**月费 0，不需要绑定支付方式**。
+
+如果以后开通了 R2，把 `kv_namespaces` 换成绑定名为 `BLOBS` 的 `r2_buckets` 即可，
+`src/api/storage.js` 会自动优先使用 R2。

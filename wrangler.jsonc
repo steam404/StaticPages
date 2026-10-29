@@ -12,6 +12,10 @@
   // 默认关闭。按 README「多端同步」一节创建资源后，把下面两块前面的
   // 注释去掉，并把 REPLACE_WITH_D1_DATABASE_ID 换成 d1 create 输出的 id。
   //
+  // 存储用 KV：不需要绑定支付方式，免费额度 1 GB / 单值 25 MiB。
+  // 如果以后开通了 R2，把 kv_namespaces 换成 r2_buckets（绑定名同样是 BLOBS 或 KV），
+  // 代码会自动识别。
+  //
   // "d1_databases": [
   //   {
   //     "binding": "DB",
@@ -19,10 +23,10 @@
   //     "database_id": "REPLACE_WITH_D1_DATABASE_ID"
   //   }
   // ],
-  // "r2_buckets": [
+  // "kv_namespaces": [
   //   {
-  //     "binding": "BLOBS",
-  //     "bucket_name": "yakult-blobs"
+  //     "binding": "KV",
+  //     "id": "REPLACE_WITH_KV_NAMESPACE_ID"
   //   }
   // ]
 }
