@@ -9,7 +9,7 @@
 
 import { parseChapters } from './chapter-parser.js';
 import { loadConfig, saveConfig, isAiReady } from './config.js';
-import { aiNews } from './ai.js';
+import { aiNews, aiNewsSummaries } from './ai.js';
 import { RECOMMENDS } from '../data/recommends.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -99,7 +99,8 @@ const LS = {
   font: 'yakult.read.font',
 };
 
-let newsCache = loadJSON(LS.news, { at: 0, items: [] });
+let newsCache = loadJSON(LS.news, { at: 0, items: [], summaries: [] });
+const NEWS_LIMIT = 5;
 let newsBusy = false;
 let books = [];
 let tab = 'books'; // news | books
@@ -293,10 +294,13 @@ function timeAgo(ts) {
   return `${Math.round(hours / 24)} 天前`;
 }
 
-function newsCard(n) {
+function newsCard(n, i) {
   const title = n.link
     ? `<a href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>`
     : esc(n.title);
+
+  const aiSummary = (newsCache.summaries || [])[i] || '';
+  const summary = aiSummary || n.summary || '';
 
   return `
     <article class="news-item">
@@ -304,7 +308,11 @@ function newsCard(n) {
         <strong>${title}</strong>
         ${n.source ? `<span class="news-source">${esc(n.source)}</span>` : ''}
       </div>
-      ${n.summary ? `<p class="news-summary">${esc(n.summary)}</p>` : ''}
+      ${
+        summary
+          ? `<p class="news-summary">${aiSummary ? '<span class="sum-tag">AI 总结</span>' : ''}${esc(summary)}</p>`
+          : ''
+      }
       <div class="news-foot">
         ${n.at ? `<span class="muted small">${timeAgo(n.at)}</span>` : ''}
         ${
@@ -317,7 +325,7 @@ function newsCard(n) {
 }
 
 function renderNews() {
-  const items = newsCache.items || [];
+  const items = (newsCache.items || []).slice(0, NEWS_LIMIT);
   const fromRss = newsCache.source === 'rss';
   const ready = isAiReady(loadConfig());
 
@@ -379,9 +387,20 @@ async function refreshNews() {
 
     if (!items.length) throw new Error('没有拉到内容');
 
-    newsCache = { at: Date.now(), items, source };
+    // 给前 5 条生成总结：一次请求，失败不影响列表
+    let summaries = [];
+    const config = loadConfig();
+    if (isAiReady(config)) {
+      try {
+        summaries = await aiNewsSummaries(config, items.slice(0, NEWS_LIMIT));
+      } catch {
+        summaries = [];
+      }
+    }
+
+    newsCache = { at: Date.now(), items, source, summaries };
     saveJSON(LS.news, newsCache);
-    toast(`已更新 ${items.length} 条`);
+    toast(`已更新 ${Math.min(items.length, NEWS_LIMIT)} 条`);
   } catch (err) {
     toast(err.message || '刷新失败');
   } finally {

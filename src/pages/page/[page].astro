@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostList from '../../components/PostList.astro';
+import { pagePosts, totalPages } from '../../lib/posts';
+
+export function getStaticPaths() {
+  const paths = [];
+  // /page/1/ 不生成，首页就是第一页，避免重复内容
+  for (let page = 2; page <= totalPages; page++) {
+    paths.push({ params: { page: String(page) }, props: { page } });
+  }
+  return paths;
+}
+
+const { page } = Astro.props;
+const items = pagePosts(page);
+const hasPrev = page > 1;
+const hasNext = page < totalPages;
+---
+
+<BaseLayout title={`文章 · 第 ${page} 页`} description="养乐多写的东西。">
+  <section class="intro">
+    <h1>文章</h1>
+    <p>第 {page} 页 · 共 {totalPages} 页</p>
+  </section>
+
+  <PostList items={items} />
+
+  <nav class="pager" aria-label="分页">
+    {
+      hasPrev && (
+        <a class="btn-ghost" href={page - 1 === 1 ? '/' : `/page/${page - 1}/`}>
+          ← 上一页
+        </a>
+      )
+    }
+    <span class="pager-info">第 {page} / {totalPages} 页</span>
+    {hasNext && <a class="btn-ghost" href={`/page/${page + 1}/`}>下一页 →</a>}
+  </nav>
+</BaseLayout>

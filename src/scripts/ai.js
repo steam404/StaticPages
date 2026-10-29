@@ -217,8 +217,7 @@ export async function aiGenerateImage(config, dish) {
 }
 
 /** 让模型整理今日全球新闻 */
-export async function aiNews(config) {
-  const raw = await chat(config, [{ role: 'user', content: config.prompts.news }]);
+export async function aiNews(config) {  const raw = await chat(config, [{ role: 'user', content: config.prompts.news }]);
   const data = pickJSON(raw);
   const list = Array.isArray(data) ? data : data.news || data.items || [];
 
@@ -230,4 +229,29 @@ export async function aiNews(config) {
       source: String(x.source || '').trim().slice(0, 24),
     }))
     .filter(x => x.title);
+}
+
+/**
+ * 给几条新闻批量写总结（一次请求）。
+ * 返回与 items 等长的字符串数组，没写到的位置为空串。
+ */
+export async function aiNewsSummaries(config, items) {
+  const list = items
+    .slice(0, 5)
+    .map((n, i) => `${i + 1}. ${n.title}｜${n.summary || ''}`)
+    .join('\n');
+
+  const prompt = `${config.prompts.newsSummary}\n\n${list}`;
+  const raw = await chat(config, [{ role: 'user', content: prompt }]);
+  const data = pickJSON(raw);
+  const arr = Array.isArray(data) ? data : data.items || [];
+
+  const out = new Array(items.length).fill('');
+  for (const row of arr) {
+    const idx = Number(row.i) - 1;
+    if (idx >= 0 && idx < out.length) {
+      out[idx] = String(row.summary || '').trim().slice(0, 200);
+    }
+  }
+  return out;
 }

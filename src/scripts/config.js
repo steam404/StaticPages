@@ -54,6 +54,12 @@ export const DEFAULT_CONFIG = {
       '[{"title":"标题（25字内）","summary":"一句话摘要（50字内）","source":"媒体名"}]',
       '要求：只写你确实知道的事实；不确定的就不要写；不要编造链接。',
     ].join('\n'),
+    newsSummary: [
+      '下面是今天几条新闻的标题和来源摘要。请为每一条写两句话的中文总结，共 60–100 字。',
+      '只陈述原文有的事实，不要评论，不要补充原文没有的信息。',
+      '只输出 JSON 数组，不要解释、不要 markdown：',
+      '[{"i":序号,"summary":"两句话总结"}]',
+    ].join('\n'),
   },
 };
 
@@ -131,7 +137,7 @@ export function mergeConfig(parsed) {
   if (ai.timeout_ms) cfg.ai.timeout_ms = Number(ai.timeout_ms) || 30000;
 
   const prompts = parsed.prompts || {};
-  for (const key of ['estimate', 'advice', 'suggest', 'vision', 'image', 'news']) {
+  for (const key of ['estimate', 'advice', 'suggest', 'vision', 'image', 'news', 'newsSummary']) {
     if (prompts[key]) cfg.prompts[key] = prompts[key];
   }
   return cfg;

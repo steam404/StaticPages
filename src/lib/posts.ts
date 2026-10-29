@@ -42,3 +42,13 @@ export const posts: Post[] = Object.entries(modules)
 export function formatDate(date: string | Date): string {
   return new Date(date).toISOString().slice(0, 10);
 }
+
+/* ---------- 首页分页 ---------- */
+
+export const PAGE_SIZE = 3;
+
+export const totalPages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
+
+/** 第 n 页（从 1 开始）的文章 */
+export const pagePosts = (n: number): Post[] =>
+  posts.slice((n - 1) * PAGE_SIZE, n * PAGE_SIZE);

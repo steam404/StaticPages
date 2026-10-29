@@ -500,6 +500,22 @@ main {
   font-size: 0.9rem;
 }
 
+/* 分页条 */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.pager-info {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ==========================================================
    动效降级
    ========================================================== */

@@ -1,6 +1,10 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { posts, formatDate } from '../lib/posts';
+import PostList from '../components/PostList.astro';
+import { posts, pagePosts, totalPages } from '../lib/posts';
+
+const items = pagePosts(1);
+const hasNext = totalPages > 1;
 ---
 
 <BaseLayout title="养乐多的主页" description="养乐多的主页：吃什么、在看什么，还有一些随手写的字。">
@@ -47,24 +51,20 @@ import { posts, formatDate } from '../lib/posts';
     </a>
   </div>
 
-  <ul class="post-list">
-    {
-      posts.map((post) => (
-        <li>
-          <a href={post.url}>
-            <h2>{post.data.title}</h2>
-            {post.data.description && <p>{post.data.description}</p>}
-          </a>
-          <div class="meta">
-            <time datetime={formatDate(post.data.pubDate)}>{formatDate(post.data.pubDate)}</time>
-            {(post.data.tags ?? []).map((tag) => (
-              <span class="tag">{tag}</span>
-            ))}
-          </div>
-        </li>
-      ))
-    }
-  </ul>
+  <PostList items={items} />
+
+  {
+    totalPages > 1 && (
+      <nav class="pager" aria-label="分页">
+        <span class="pager-info">
+          第 1 / {totalPages} 页
+        </span>
+        <a class="btn-ghost" href="/page/2/">
+          下一页 →
+        </a>
+      </nav>
+    )
+  }
 
   {
     posts.length === 0 && (
