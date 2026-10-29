@@ -458,6 +458,26 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     text-decoration: underline;
   }
 
+  .read .news-head strong a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .read .news-head strong a:hover {
+    color: var(--accent);
+  }
+
+  .read .news-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: 0.35rem;
+  }
+
+  .read .news-foot .small {
+    font-size: 0.74rem;
+  }
+
   .read .news-note {
     margin: 1rem 0 0;
     font-size: 0.74rem;

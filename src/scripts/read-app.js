@@ -211,25 +211,51 @@ const fmtTime = ts => {
   return `${d.getMonth() + 1} 月 ${d.getDate()} 日 ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 };
 
+function timeAgo(ts) {
+  if (!ts) return '';
+  const mins = Math.round((Date.now() - ts) / 60000);
+  if (mins < 1) return '刚刚';
+  if (mins < 60) return `${mins} 分钟前`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  return `${Math.round(hours / 24)} 天前`;
+}
+
 function newsCard(n) {
+  const title = n.link
+    ? `<a href="${esc(n.link)}" target="_blank" rel="noopener noreferrer">${esc(n.title)}</a>`
+    : esc(n.title);
+
   return `
     <article class="news-item">
       <div class="news-head">
-        <strong>${esc(n.title)}</strong>
+        <strong>${title}</strong>
         ${n.source ? `<span class="news-source">${esc(n.source)}</span>` : ''}
       </div>
       ${n.summary ? `<p class="news-summary">${esc(n.summary)}</p>` : ''}
-      <a class="news-search" href="https://www.bing.com/search?q=${encodeURIComponent(n.title)}" target="_blank" rel="noopener noreferrer">搜索这条 ↗</a>
+      <div class="news-foot">
+        ${n.at ? `<span class="muted small">${timeAgo(n.at)}</span>` : ''}
+        ${
+          n.link
+            ? ''
+            : `<a class="news-search" href="https://www.bing.com/search?q=${encodeURIComponent(n.title)}" target="_blank" rel="noopener noreferrer">搜索这条 ↗</a>`
+        }
+      </div>
     </article>`;
 }
 
 function renderNews() {
   const items = newsCache.items || [];
+  const fromRss = newsCache.source === 'rss';
   const ready = isAiReady(loadConfig());
 
   return `
     <div class="read-head">
-      <span class="muted">${newsCache.at ? `更新于 ${fmtTime(newsCache.at)}` : '还没拉取'}</span>
+      <span class="muted">${
+        newsCache.at
+          ? `更新于 ${fmtTime(newsCache.at)}${newsCache.source ? (fromRss ? ' · RSS' : ' · AI') : ''}`
+          : '还没拉取'
+      }</span>
       <button class="btn-primary" data-action="refresh-news" ${newsBusy ? 'disabled' : ''}>
         ${newsBusy ? '拉取中…' : '🔄 刷新'}
       </button>
@@ -240,30 +266,48 @@ function renderNews() {
         ? `<div class="news-list">${items.map(newsCard).join('')}</div>`
         : `<div class="read-empty card">
              <p class="big">🌍</p>
-             <p>${ready ? '点「刷新」，让 AI 整理今天的全球要闻。' : '先点右上角 ⚙ 填一下 API Key。'}</p>
+             <p>点「刷新」，拉一次今天的全球要闻。</p>
+             ${ready ? '' : '<p class="muted small">如果 RSS 接口没部署，会回退到 AI，需要先在右上角 ⚙ 填 Key。</p>'}
            </div>`
     }
 
-    <p class="news-note">内容由 AI 整理，时效性取决于所用模型是否能联网；标题未附原文链接，可点「搜索这条」自己核对。</p>
+    <p class="news-note">${
+      fromRss
+        ? '来自 BBC、纽约时报中文网、卫报等媒体的 RSS，点标题看原文。'
+        : '内容由 AI 整理，时效性取决于所用模型是否能联网。'
+    }</p>
   `;
 }
 
 async function refreshNews() {
-  const config = loadConfig();
-  if (!isAiReady(config)) {
-    toast('先在 ⚙ 里填 API Key');
-    openAiSettings();
-    return;
-  }
   if (newsBusy) return;
 
   newsBusy = true;
   await render();
 
   try {
-    const items = await aiNews(config);
-    if (!items.length) throw new Error('AI 没有返回可用条目');
-    newsCache = { at: Date.now(), items };
+    let items = [];
+    let source = '';
+
+    // 优先走同域 RSS 接口（Worker 抓取，最可靠）
+    try {
+      const res = await fetch('/api/news', { cache: 'no-store' });
+      if (!res.ok) throw new Error(`接口返回 ${res.status}`);
+      const data = await res.json();
+      if (!data.items?.length) throw new Error(data.error || '接口没有内容');
+      items = data.items;
+      source = 'rss';
+    } catch (rssErr) {
+      // 没有 Worker / 抓取失败时，退回 AI
+      const config = loadConfig();
+      if (!isAiReady(config)) throw rssErr;
+      items = await aiNews(config);
+      source = 'ai';
+    }
+
+    if (!items.length) throw new Error('没有拉到内容');
+
+    newsCache = { at: Date.now(), items, source };
     saveJSON(LS.news, newsCache);
     toast(`已更新 ${items.length} 条`);
   } catch (err) {
@@ -457,7 +501,7 @@ document.addEventListener('click', async e => {
     await render();
 
     // 进新闻页时，缓存超过 12 小时就自动拉一次
-    if (tab === 'news' && Date.now() - (newsCache.at || 0) > 12 * 3600 * 1000 && isAiReady(loadConfig())) {
+    if (tab === 'news' && Date.now() - (newsCache.at || 0) > 12 * 3600 * 1000) {
       refreshNews();
     }
     return;

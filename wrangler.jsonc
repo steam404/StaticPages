@@ -1,9 +1,10 @@
 {
-  // Cloudflare Workers 静态资源托管
-  // 构建产物在 dist/，由 Workers 直接作为静态文件提供
+  // Cloudflare Workers：静态资源 + /api/news 接口
   "name": "staticpages",
   "compatibility_date": "2026-10-01",
+  "main": "src/worker.js",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS"
   }
 }
