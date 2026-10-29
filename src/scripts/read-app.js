@@ -10,7 +10,7 @@
 import { parseChapters } from './chapter-parser.js';
 import { loadConfig, saveConfig, isAiReady } from './config.js';
 import { aiNews } from './ai.js';
-import { RECOMMENDS, REC_COUNT } from '../data/recommends.js';
+import { RECOMMENDS } from '../data/recommends.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -221,7 +221,7 @@ async function renderBooks() {
 
     <div class="chips">
       <button class="chip ${bookView === 'shelf' ? 'active' : ''}" data-action="book-view" data-view="shelf">📚 我的书架</button>
-      <button class="chip ${bookView === 'recs' ? 'active' : ''}" data-action="book-view" data-view="recs">🍶 养乐多的推荐 ${REC_COUNT}</button>
+      <button class="chip ${bookView === 'recs' ? 'active' : ''}" data-action="book-view" data-view="recs">🍶 养乐多的推荐</button>
     </div>
 
     <div id="book-list">${await bookListHTML()}</div>
