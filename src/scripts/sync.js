@@ -75,14 +75,25 @@ const bytesToDataUrl = (bytes, type = 'image/jpeg') => {
 
 const dbCache = new Map();
 
-function openDb(name, version, upgrade) {
+/** 已知数据库列表；浏览器不支持检测时返回 null */
+async function knownDbs() {
+  if (typeof indexedDB.databases !== 'function') return null;
+  try {
+    return await indexedDB.databases();
+  } catch {
+    return null;
+  }
+}
+
+/** 打开一个已存在的库，不触发升级，避免误建空库 */
+function openExisting(name) {
   if (dbCache.has(name)) return dbCache.get(name);
   const p = new Promise(resolve => {
     try {
-      const req = indexedDB.open(name, version);
-      req.onupgradeneeded = () => upgrade?.(req.result);
+      const req = indexedDB.open(name);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
     } catch {
       resolve(null);
     }
@@ -91,47 +102,81 @@ function openDb(name, version, upgrade) {
   return p;
 }
 
+/** 库与 store 都存在才继续；不存在的直接跳过 */
+async function storeReady(desc) {
+  const dbs = await knownDbs();
+  if (!dbs) return false;
+  if (!dbs.some(d => d.name === desc.db)) return false;
+  const db = await openExisting(desc.db);
+  return Boolean(db && db.objectStoreNames.contains(desc.store));
+}
+
 async function idbAll(desc) {
-  const db = await openDb(desc.db, 1);
+  if (!(await storeReady(desc))) return [];
+  const db = await openExisting(desc.db);
   if (!db) return [];
   return new Promise(resolve => {
-    const tx = db.transaction(desc.store, 'readonly');
-    const req = tx.objectStore(desc.store).getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => resolve([]);
+    try {
+      const tx = db.transaction(desc.store, 'readonly');
+      const req = tx.objectStore(desc.store).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+      tx.onabort = () => resolve([]);
+    } catch {
+      resolve([]);
+    }
   });
 }
 
 async function idbAllKeys(desc) {
-  const db = await openDb(desc.db, 1);
+  if (!(await storeReady(desc))) return [];
+  const db = await openExisting(desc.db);
   if (!db) return [];
   return new Promise(resolve => {
-    const tx = db.transaction(desc.store, 'readonly');
-    const req = tx.objectStore(desc.store).getAllKeys();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => resolve([]);
+    try {
+      const tx = db.transaction(desc.store, 'readonly');
+      const req = tx.objectStore(desc.store).getAllKeys();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+      tx.onabort = () => resolve([]);
+    } catch {
+      resolve([]);
+    }
   });
 }
 
 async function idbGet(desc, key) {
-  const db = await openDb(desc.db, 1);
+  if (!(await storeReady(desc))) return null;
+  const db = await openExisting(desc.db);
   if (!db) return null;
   return new Promise(resolve => {
-    const tx = db.transaction(desc.store, 'readonly');
-    const req = tx.objectStore(desc.store).get(key);
-    req.onsuccess = () => resolve(req.result ?? null);
-    req.onerror = () => resolve(null);
+    try {
+      const tx = db.transaction(desc.store, 'readonly');
+      const req = tx.objectStore(desc.store).get(key);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => resolve(null);
+      tx.onabort = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
   });
 }
 
 async function idbPut(desc, value, key) {
-  const db = await openDb(desc.db, 1);
+  if (!(await storeReady(desc))) return false;
+  const db = await openExisting(desc.db);
   if (!db) return false;
   return new Promise(resolve => {
-    const tx = db.transaction(desc.store, 'readwrite');
-    const req = desc.keyPath ? tx.objectStore(desc.store).put(value) : tx.objectStore(desc.store).put(value, key);
-    req.onsuccess = () => resolve(true);
-    req.onerror = () => resolve(false);
+    try {
+      const tx = db.transaction(desc.store, 'readwrite');
+      const store = tx.objectStore(desc.store);
+      tx.oncomplete = () => resolve(true);
+      tx.onabort = () => resolve(false);
+      if (desc.keyPath) store.put(value);
+      else store.put(value, key);
+    } catch {
+      resolve(false);
+    }
   });
 }
 
@@ -162,7 +207,8 @@ const shaCacheKey = 'yakult.blobSha';
 const shaCache = loadJSON(shaCacheKey, {});
 
 async function collectBlobs() {
-  const images = [];
+  try {
+    const images = [];
   const imageKeys = await idbAllKeys(DBS.images);
 
   for (const id of imageKeys) {
@@ -193,6 +239,10 @@ async function collectBlobs() {
 
   localStorage.setItem(shaCacheKey, JSON.stringify(shaCache));
   return { images, books };
+  } catch {
+    // 照片/书籍读不到不该影响记录同步
+    return { images: [], books: [] };
+  }
 }
 
 function collectSnapshot(blobs) {
@@ -242,7 +292,7 @@ async function applySnapshot(payload) {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(merged));
   }
 
-  await pullBlobs(payload);
+  await pullBlobs(payload).catch(() => 0);
   localStorage.setItem(REV_KEY, String(payload._rev ?? state.serverRev));
 }
 

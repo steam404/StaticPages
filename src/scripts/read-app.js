@@ -40,7 +40,7 @@ function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise(resolve => {
     try {
-      const req = indexedDB.open(DB_NAME, 1);
+      const req = indexedDB.open(DB_NAME, 2);
       req.onupgradeneeded = () => {
         const db = req.result;
         if (!db.objectStoreNames.contains('books')) db.createObjectStore('books', { keyPath: 'id' });

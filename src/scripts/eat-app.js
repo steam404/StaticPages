@@ -67,8 +67,12 @@ function openDb() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise(resolve => {
     try {
-      const req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = () => req.result.createObjectStore('images');
+      const req = indexedDB.open(DB_NAME, 2);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        // 版本 2：顺便修复可能存在的「空库」（有数据库但没有 images 表）
+        if (!db.objectStoreNames.contains('images')) db.createObjectStore('images');
+      };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);
     } catch {
