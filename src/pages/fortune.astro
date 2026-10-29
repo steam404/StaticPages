@@ -1,0 +1,304 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="养乐多今天运势如何" description="摇一支签，看看今天。玩玩而已，别太当真。">
+  <div class="fortune">
+    <header class="fhead">
+      <h1>养乐多今天运势如何</h1>
+      <p class="fsub">心里默念一件事，摇一摇。</p>
+    </header>
+
+    <div class="stage">
+      <div class="tube" id="tube" aria-hidden="true">
+        <span class="stick s1"></span>
+        <span class="stick s2"></span>
+        <span class="stick s3"></span>
+        <span class="stick s4"></span>
+        <span class="tube-body"><span class="tube-glyph">签</span></span>
+      </div>
+    </div>
+
+    <div class="factions">
+      <button class="btn-primary" id="shake">摇一摇</button>
+    </div>
+
+    <div id="fortune-result"></div>
+
+    <p class="fdisclaimer">纯属娱乐。好的当真，不好的当没看见。</p>
+  </div>
+
+  <script>
+    import '../scripts/fortune-app.js';
+  </script>
+</BaseLayout>
+
+<style is:global>
+  .fortune {
+    max-width: 34rem;
+    margin: 0 auto;
+  }
+
+  .fhead {
+    text-align: center;
+    padding-top: 0.5rem;
+  }
+
+  .fhead h1 {
+    margin: 0 0 0.4rem;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .fsub {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+  }
+
+  /* ---------- 签筒 ---------- */
+
+  .stage {
+    height: 15rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 0.5rem;
+    margin-top: 1.2rem;
+    position: relative;
+  }
+
+  .tube {
+    position: relative;
+    width: 7rem;
+    height: 11rem;
+    transform-origin: 50% 90%;
+  }
+
+  .tube-body {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 8.4rem;
+    border-radius: 0.6rem 0.6rem 1rem 1rem;
+    background: linear-gradient(160deg, #9c6b3c 0%, #7a4f27 55%, #5f3b1d 100%);
+    box-shadow:
+      inset 0 0.35rem 0.6rem rgb(0 0 0 / 0.35),
+      0 0.5rem 1.2rem rgb(0 0 0 / 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .tube-glyph {
+    color: rgb(255 255 255 / 0.8);
+    font-size: 1.5rem;
+    writing-mode: vertical-rl;
+    letter-spacing: 0.2em;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  }
+
+  .stick {
+    position: absolute;
+    bottom: 7rem;
+    width: 0.55rem;
+    height: 4.2rem;
+    border-radius: 0.3rem 0.3rem 0 0;
+    background: linear-gradient(180deg, #f3e3c8, #d9c3a0);
+    box-shadow: inset -0.1rem 0 0 rgb(0 0 0 / 0.12);
+    transform-origin: 50% 100%;
+    z-index: 1;
+  }
+
+  .stick.s1 { left: 1.1rem; transform: rotate(-7deg); }
+  .stick.s2 { left: 2.5rem; height: 4.8rem; transform: rotate(-2deg); }
+  .stick.s3 { left: 3.9rem; height: 4rem; transform: rotate(4deg); }
+  .stick.s4 { left: 5.1rem; height: 4.5rem; transform: rotate(9deg); }
+
+  .tube.shaking {
+    animation: tube-shake 0.16s 5 ease-in-out;
+  }
+
+  @keyframes tube-shake {
+    0% { transform: rotate(0deg) translateY(0); }
+    25% { transform: rotate(-7deg) translateY(-0.2rem); }
+    75% { transform: rotate(7deg) translateY(0.1rem); }
+    100% { transform: rotate(0deg) translateY(0); }
+  }
+
+  .tube.pop .stick.s2 {
+    animation: stick-rise 0.6s ease-out forwards;
+  }
+
+  @keyframes stick-rise {
+    from { transform: translateY(0) rotate(-2deg); }
+    to { transform: translateY(-2.6rem) rotate(-2deg); }
+  }
+
+  .factions {
+    display: flex;
+    justify-content: center;
+    margin: 0.8rem 0 1.6rem;
+  }
+
+  .fortune .btn-primary,
+  .fortune .btn-ghost {
+    font: inherit;
+    font-size: 0.95rem;
+    padding: 0.55rem 1.6rem;
+    border-radius: 999px;
+    cursor: pointer;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .fortune .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .fortune .btn-ghost {
+    background: transparent;
+    color: var(--accent);
+    font-size: 0.85rem;
+    padding: 0.4rem 1.1rem;
+  }
+
+  /* ---------- 结果 ---------- */
+
+  #fortune-result.pop {
+    animation: card-in 0.55s ease-out;
+  }
+
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(0.8rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fcard {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.3rem 1.2rem 1.1rem;
+    text-align: center;
+    background: var(--bg);
+  }
+
+  .fcard.best { border-color: #c0392b; }
+  .fcard.good { border-color: #b8860b; }
+  .fcard.mid { border-color: var(--border); }
+  .fcard.bad { border-color: #5b7c99; }
+  .fcard.worst { border-color: #4a4a52; }
+
+  .fcard-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .fgrade {
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    padding: 0 0.6rem;
+    font-size: 0.76rem;
+  }
+
+  .fcard.best .fgrade { color: #c0392b; }
+  .fcard.good .fgrade { color: #b8860b; }
+  .fcard.mid .fgrade { color: var(--muted); }
+  .fcard.bad .fgrade { color: #5b7c99; }
+  .fcard.worst .fgrade { color: #6b6b72; }
+
+  .fcard h2 {
+    margin: 0.6rem 0 1rem;
+    font-size: 1.35rem;
+    letter-spacing: 0.08em;
+  }
+
+  .fpoem {
+    margin: 0 auto 1.1rem;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    max-width: 20rem;
+  }
+
+  .fpoem p {
+    margin: 0.15rem 0;
+    font-size: 1.02rem;
+    letter-spacing: 0.18em;
+    line-height: 1.9;
+  }
+
+  .freading {
+    margin: 0 auto 1.1rem;
+    max-width: 24rem;
+    font-size: 0.9rem;
+    line-height: 1.85;
+    color: var(--muted);
+    text-align: left;
+  }
+
+  .fyi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-bottom: 1.1rem;
+  }
+
+  .fyi-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-size: 0.84rem;
+  }
+
+  .fyi-row em {
+    font-style: normal;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.05rem 0.6rem;
+  }
+
+  .fyi-tag {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 0.78rem;
+    color: #fff;
+  }
+
+  .fyi-tag.good { background: #3f8f4f; }
+  .fyi-tag.bad { background: #b4451d; }
+
+  .fnote {
+    margin: 0 0 0.7rem;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .fdisclaimer {
+    text-align: center;
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin-top: 1.6rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tube.shaking,
+    .tube.pop .stick.s2,
+    #fortune-result.pop {
+      animation: none;
+    }
+  }
+</style>
