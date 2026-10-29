@@ -10,7 +10,7 @@
 import { parseChapters } from './chapter-parser.js';
 import { loadConfig, saveConfig, isAiReady } from './config.js';
 import { aiNews } from './ai.js';
-import { CLASSICS, CLASSIC_COUNT } from '../data/classics.js';
+import { RECOMMENDS, REC_COUNT } from '../data/recommends.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -105,7 +105,7 @@ let books = [];
 let tab = 'books'; // news | books
 let reader = null; // { meta, text, index }
 let fontSize = Number(localStorage.getItem(LS.font)) || 17;
-let bookView = 'shelf'; // shelf | classics
+let bookView = 'shelf'; // shelf | recs
 let bookQuery = '';
 
 const app = () => document.getElementById('read-app');
@@ -149,9 +149,9 @@ function matchShelf(b, q) {
   return t.includes(q) || fuzzyHit(t, q);
 }
 
-function matchClassic(c, q) {
+function matchRec(r, q) {
   if (!q) return true;
-  return [c.title, c.author, c.era, c.intro].map(normText).some(f => f.includes(q) || fuzzyHit(f, q));
+  return [r.title, r.author, r.era, r.intro, r.reason].map(normText).some(f => f.includes(q) || fuzzyHit(f, q));
 }
 
 function bookCard(b) {
@@ -171,27 +171,27 @@ function bookCard(b) {
     </article>`;
 }
 
-function classicCard(c) {
+function recCard(r) {
   return `
-    <a class="classic" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">
-      <div class="classic-main">
-        <div class="classic-title">
-          <strong>${esc(c.title)}</strong>
-          <span class="muted small">${esc(c.author)} · ${esc(c.era)}</span>
-        </div>
-        <p class="classic-intro">${esc(c.intro)}</p>
-      </div>
-      <span class="classic-src">${esc(c.sourceName)} ↗</span>
-    </a>`;
+    <details class="rec">
+      <summary>
+        <span class="rec-head">
+          <strong>${esc(r.title)}</strong>
+          <span class="muted small">${esc(r.author)} · ${esc(r.era)}</span>
+        </span>
+        <span class="rec-intro">${esc(r.intro)}</span>
+      </summary>
+      <p class="rec-reason">${esc(r.reason)}</p>
+    </details>`;
 }
 
 async function bookListHTML() {
   const q = normText(bookQuery);
 
-  if (bookView === 'classics') {
-    const list = CLASSICS.filter(c => matchClassic(c, q));
-    if (!list.length) return `<p class="empty">书单里没找到「${esc(bookQuery)}」</p>`;
-    return `<div class="classic-list">${list.map(classicCard).join('')}</div>`;
+  if (bookView === 'recs') {
+    const list = RECOMMENDS.filter(r => matchRec(r, q));
+    if (!list.length) return `<p class="empty">推荐里没找到「${esc(bookQuery)}」</p>`;
+    return `<div class="rec-list">${list.map(recCard).join('')}</div>`;
   }
 
   const list = books.filter(b => matchShelf(b, q));
@@ -221,14 +221,14 @@ async function renderBooks() {
 
     <div class="chips">
       <button class="chip ${bookView === 'shelf' ? 'active' : ''}" data-action="book-view" data-view="shelf">📚 我的书架</button>
-      <button class="chip ${bookView === 'classics' ? 'active' : ''}" data-action="book-view" data-view="classics">📖 经典书单 ${CLASSIC_COUNT}</button>
+      <button class="chip ${bookView === 'recs' ? 'active' : ''}" data-action="book-view" data-view="recs">🍶 养乐多推荐 ${REC_COUNT}</button>
     </div>
 
     <div id="book-list">${await bookListHTML()}</div>
 
     ${
-      bookView === 'classics'
-        ? '<p class="news-note">书单只含书目和简介。点一本去维基文库 / Gutenberg 找 txt，下载后拖进「我的书架」就能读。</p>'
+      bookView === 'recs'
+        ? '<p class="news-note">点书名可以展开推荐理由。都是读完有印象的，不是必读书单。</p>'
         : ''
     }
   `;

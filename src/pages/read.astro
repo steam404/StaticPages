@@ -436,56 +436,65 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     color: #fff;
   }
 
-  .read .classic-list {
+  .read .rec-list {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  .read .classic {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
+  .read .rec {
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 0.65rem 0.8rem;
-    text-decoration: none;
-    color: inherit;
     transition: border-color 0.15s;
   }
 
-  .read .classic:hover {
+  .read .rec:hover {
     border-color: var(--accent);
-    text-decoration: none;
   }
 
-  .read .classic-main {
-    flex: 1;
-    min-width: 0;
+  .read .rec[open] {
+    border-color: var(--accent);
   }
 
-  .read .classic-title {
+  .read .rec summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .read .rec summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .read .rec summary::marker {
+    content: '';
+  }
+
+  .read .rec-head {
     display: flex;
     align-items: baseline;
     gap: 0.5rem;
     flex-wrap: wrap;
   }
 
-  .read .classic-title strong {
+  .read .rec-head strong {
     font-size: 0.95rem;
   }
 
-  .read .classic-intro {
-    margin: 0.2rem 0 0;
+  .read .rec-intro {
     font-size: 0.82rem;
     color: var(--muted);
   }
 
-  .read .classic-src {
-    flex: none;
-    font-size: 0.72rem;
-    color: var(--accent);
-    white-space: nowrap;
+  .read .rec-reason {
+    margin: 0.6rem 0 0.1rem;
+    padding-top: 0.6rem;
+    border-top: 1px dashed var(--border);
+    font-size: 0.86rem;
+    line-height: 1.75;
   }
 
   /* ---------- 全球新闻 ---------- */
