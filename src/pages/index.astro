@@ -9,14 +9,25 @@ import { posts, formatDate } from '../lib/posts';
     <p>这里记我做的菜、吃过的饭，和一点技术笔记。</p>
   </section>
 
-  <a class="eat-entry" href="/eat/">
-    <span class="eat-emoji">🍚</span>
-    <span class="eat-text">
-      <strong>养乐多在吃什么</strong>
-      <small>记录每天的菜、热量和营养</small>
-    </span>
-    <span class="eat-arrow">→</span>
-  </a>
+  <div class="entries">
+    <a class="entry" href="/eat/">
+      <span class="entry-emoji">🥢</span>
+      <span class="entry-text">
+        <strong>养乐多在吃什么</strong>
+        <small>记录每天的菜、热量和营养</small>
+      </span>
+      <span class="entry-arrow">→</span>
+    </a>
+
+    <a class="entry" href="/read/">
+      <span class="entry-emoji">📖</span>
+      <span class="entry-text">
+        <strong>养乐多在看什么</strong>
+        <small>新闻、书籍、文章，以及 TXT 阅读器</small>
+      </span>
+      <span class="entry-arrow">→</span>
+    </a>
+  </div>
 
   <ul class="post-list">
     {
@@ -47,11 +58,22 @@ import { posts, formatDate } from '../lib/posts';
 </BaseLayout>
 
 <style>
-  .eat-entry {
+  .entries {
+    display: grid;
+    gap: 0.7rem;
+    margin: 1.6rem 0 0.5rem;
+  }
+
+  @media (min-width: 560px) {
+    .entries {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .entry {
     display: flex;
     align-items: center;
     gap: 0.9rem;
-    margin: 1.6rem 0 0.5rem;
     padding: 0.9rem 1rem;
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -60,33 +82,33 @@ import { posts, formatDate } from '../lib/posts';
     transition: border-color 0.15s, transform 0.15s;
   }
 
-  .eat-entry:hover {
+  .entry:hover {
     border-color: var(--accent);
     transform: translateY(-1px);
     text-decoration: none;
   }
 
-  .eat-emoji {
+  .entry-emoji {
     font-size: 1.6rem;
     line-height: 1;
   }
 
-  .eat-text {
+  .entry-text {
     display: flex;
     flex-direction: column;
     gap: 0.1rem;
   }
 
-  .eat-text strong {
+  .entry-text strong {
     font-size: 1rem;
   }
 
-  .eat-text small {
+  .entry-text small {
     color: var(--muted);
     font-size: 0.82rem;
   }
 
-  .eat-arrow {
+  .entry-arrow {
     margin-left: auto;
     color: var(--accent);
     font-size: 1.1rem;

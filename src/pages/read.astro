@@ -1,0 +1,480 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="养乐多在看什么" description="新闻、书，还有值得留着的文章。">
+  <div class="read">
+    <header class="read-top">
+      <h1>养乐多在看什么</h1>
+      <p class="read-sub">新闻、书，还有值得留着的文章。</p>
+      <nav class="read-tabs">
+        <button data-rtab="news">📰 新闻</button>
+        <button data-rtab="books" class="active">📚 书籍</button>
+        <button data-rtab="articles">📝 文章</button>
+      </nav>
+    </header>
+
+    <div id="read-app">
+      <p class="read-loading">加载中…</p>
+    </div>
+  </div>
+
+  <dialog id="read-modal"></dialog>
+  <div id="read-toast" role="status"></div>
+
+  <script>
+    import '../scripts/read-app.js';
+  </script>
+</BaseLayout>
+
+<style is:global>
+  .read {
+    max-width: 46rem;
+    margin: 0 auto;
+  }
+
+  .read-top h1 {
+    margin: 0.2rem 0 0.35rem;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .read-sub {
+    margin: 0 0 1.2rem;
+    color: var(--muted);
+    font-size: 0.94rem;
+  }
+
+  .read-tabs {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 1.3rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.6rem;
+  }
+
+  .read-tabs button {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.94rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
+  .read-tabs button.active {
+    color: #fff;
+    background: var(--accent);
+  }
+
+  .read-loading {
+    color: var(--muted);
+  }
+
+  /* ---------- 通用 ---------- */
+
+  .read .card,
+  .read-empty {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.6rem 1.2rem;
+    text-align: center;
+  }
+
+  .read-empty .big {
+    font-size: 2rem;
+    margin: 0 0 0.6rem;
+  }
+
+  .read-empty p {
+    margin: 0.3rem 0;
+  }
+
+  .read .muted {
+    color: var(--muted);
+  }
+
+  .read .small {
+    font-size: 0.76rem;
+  }
+
+  .read .btn-primary,
+  .read .btn-ghost,
+  #read-modal .btn-primary,
+  #read-modal .btn-ghost {
+    font: inherit;
+    font-size: 0.88rem;
+    border-radius: 8px;
+    padding: 0.4rem 0.85rem;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg);
+  }
+
+  .read .btn-primary,
+  #read-modal .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .read .btn-ghost:hover,
+  #read-modal .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .read .btn-ghost:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+
+  .read .read-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  /* ---------- 书架 ---------- */
+
+  .read .book-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .read .book {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.8rem 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+
+  .read .book:hover {
+    border-color: var(--accent);
+  }
+
+  .read .book-cover {
+    width: 2.6rem;
+    height: 3.4rem;
+    border-radius: 6px;
+    background: var(--code-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex: none;
+  }
+
+  .read .book-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .read .book-info strong {
+    font-size: 0.96rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .read .book-progress {
+    height: 4px;
+    background: var(--code-bg);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 0.1rem 0;
+  }
+
+  .read .book-progress span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+
+  .read .icon {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 0.25rem 0.4rem;
+    border-radius: 6px;
+    line-height: 1;
+  }
+
+  .read .icon:hover {
+    background: var(--border);
+    color: var(--fg);
+  }
+
+  .read .icon.danger:hover {
+    color: #d9534f;
+  }
+
+  /* ---------- 阅读器 ---------- */
+
+  .read .reader {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .read .reader-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--code-bg);
+  }
+
+  .read .reader-title {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    text-align: center;
+  }
+
+  .read .reader-title strong {
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .read .reader-title .muted {
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .read .reader-body {
+    padding: 1.2rem 1.3rem;
+    line-height: 1.95;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-y: auto;
+    max-height: calc(100vh - 15rem);
+    min-height: 18rem;
+  }
+
+  .read .reader-foot {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.8rem;
+    border-top: 1px solid var(--border);
+    background: var(--code-bg);
+  }
+
+  .read .reader-pos {
+    flex: 1;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .read .reader-font {
+    display: flex;
+    gap: 0.2rem;
+    margin-left: auto;
+  }
+
+  /* ---------- 目录 ---------- */
+
+  #read-modal {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: 80vh;
+  }
+
+  #read-modal::backdrop {
+    background: rgb(0 0 0 / 0.45);
+  }
+
+  #read-modal .modal-inner {
+    padding: 1rem 1.1rem;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    overflow: hidden;
+  }
+
+  #read-modal h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+
+  #read-modal .toc-list {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  #read-modal .toc-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    text-align: left;
+    font: inherit;
+    font-size: 0.88rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+  }
+
+  #read-modal .toc-item:hover {
+    background: var(--code-bg);
+  }
+
+  #read-modal .toc-item.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  #read-modal .toc-item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #read-modal .toc-item em {
+    font-style: normal;
+    color: var(--muted);
+    font-size: 0.75rem;
+    flex: none;
+  }
+
+  #read-modal label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.84rem;
+    color: var(--muted);
+  }
+
+  #read-modal input {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  #read-modal .modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  /* ---------- 新闻 / 文章 ---------- */
+
+  .read .link-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .read .link-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .read .link-item a {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .read .link-item a:hover strong {
+    color: var(--accent);
+  }
+
+  .read .link-item strong {
+    font-size: 0.94rem;
+  }
+
+  .read .link-item .muted {
+    font-size: 0.8rem;
+  }
+
+  .read .link-host {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* ---------- toast ---------- */
+
+  #read-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 2rem;
+    transform: translate(-50%, 1rem);
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 50;
+  }
+
+  #read-toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  @media (max-width: 480px) {
+    .read .reader-body {
+      padding: 0.9rem;
+      max-height: calc(100vh - 13rem);
+    }
+
+    .read .reader-foot {
+      flex-wrap: wrap;
+    }
+  }
+</style>
