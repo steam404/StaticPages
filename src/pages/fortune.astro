@@ -128,13 +128,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     100% { transform: rotate(0deg) translateY(0); }
   }
 
-  .tube.pop .stick.s2 {
-    animation: stick-rise 0.6s ease-out forwards;
-  }
-
-  @keyframes stick-rise {
-    from { transform: translateY(0) rotate(-2deg); }
-    to { transform: translateY(-2.6rem) rotate(-2deg); }
+  .stick.s2 {
+    will-change: transform;
   }
 
   .factions {
@@ -295,8 +290,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .tube.shaking,
-    .tube.pop .stick.s2,
     #fortune-result.pop {
       animation: none;
     }

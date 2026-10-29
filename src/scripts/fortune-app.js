@@ -98,28 +98,61 @@ function shake() {
 
   const t = tube();
   const btn = shakeBtn();
+  const stick = t?.querySelector('.stick.s2');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  t.classList.add('shaking');
   btn.disabled = true;
   btn.textContent = '摇签中…';
 
-  // 减少动效偏好：跳过抖动
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const wait = reduce ? 120 : 900;
+  // 复位上一轮抽出的签
+  stick?.getAnimations?.().forEach(a => a.cancel());
+  if (stick) stick.style.transform = '';
+
+  // 用 Web Animations API 驱动，避免受 CSS 媒体查询影响
+  const shakeDur = reduce ? 220 : 140;
+  const rounds = reduce ? 2 : 6;
+
+  const anim = t?.animate?.(
+    [
+      { transform: 'rotate(0deg) translateY(0)' },
+      { transform: 'rotate(-8deg) translateY(-6px)' },
+      { transform: 'rotate(8deg) translateY(3px)' },
+      { transform: 'rotate(0deg) translateY(0)' },
+    ],
+    { duration: shakeDur, iterations: rounds, easing: 'ease-in-out' },
+  );
+
+  // 老浏览器没有 animate()：退回 CSS 类
+  if (!anim && t) {
+    t.classList.add('shaking');
+    setTimeout(() => t.classList.remove('shaking'), 800);
+  }
 
   setTimeout(() => {
-    t.classList.remove('shaking');
-    t.classList.add('pop');
+    anim?.cancel?.();
+
+    // 一支签抽出来
+    stick?.animate?.(
+      [
+        { transform: 'translateY(0) rotate(-2deg)' },
+        { transform: 'translateY(-72px) rotate(-2deg)' },
+      ],
+      { duration: reduce ? 180 : 520, easing: 'cubic-bezier(.2,.9,.2,1)', fill: 'forwards' },
+    );
 
     current = drawFortune();
     saveToday(current);
-    render({ animate: true });
 
-    setTimeout(() => t.classList.remove('pop'), 600);
-
-    btn.disabled = false;
-    busy = false;
-  }, wait);
+    setTimeout(
+      () => {
+        render({ animate: true });
+        btn.disabled = false;
+        btn.textContent = '再摇一次';
+        busy = false;
+      },
+      reduce ? 120 : 430,
+    );
+  }, shakeDur * rounds);
 }
 
 /* ============================== 事件 ============================== */
@@ -132,6 +165,10 @@ document.addEventListener('click', e => {
 });
 
 document.getElementById('shake')?.addEventListener('click', shake);
+
+// 直接点签筒也能摇，更好发现
+document.getElementById('tube')?.addEventListener('click', shake);
+tube()?.style.setProperty('cursor', 'pointer');
 
 /* 启动 */
 render();
