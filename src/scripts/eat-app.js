@@ -55,6 +55,7 @@ const persist = () => {
   saveJSON(LS.recipes, recipes);
   saveJSON(LS.meals, meals);
   saveJSON(LS.settings, ui);
+  window.markSyncDirty?.();
 };
 
 /* ---------- 图片（IndexedDB） ---------- */

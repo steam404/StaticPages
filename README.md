@@ -177,3 +177,64 @@ Cloudflare 会自动为根域名做 CNAME 展平并签发证书，不需要手�
 ```
 
 留空就只用内置表，不联网。
+
+## 多端同步（可选，需要在 Cloudflare 上开通 D1 + R2）
+
+默认不启用：不配置时顶栏的「同步」按钮是灰点，所有数据仍然只存在本机。配置之后，同一个口令登录的设备共享同一份数据。
+
+### 1. 创建资源
+
+```powershell
+# D1 数据库（存版本号与登录限流）
+npx wrangler d1 create yakult-sync
+
+# R2 存储桶（存快照、图片、书籍正文）
+npx wrangler r2 bucket create yakult-blobs
+```
+
+`d1 create` 会输出 `database_id`。打开 `wrangler.jsonc`，把文件末尾那两块
+（`d1_databases` 与 `r2_buckets`）的注释去掉，并把 `REPLACE_WITH_D1_DATABASE_ID`
+换成实际 id。
+
+这两块默认是注释状态——不配置时整站照常部署，只是顶栏「同步」显示为未启用。
+
+### 2. 建表
+
+```powershell
+npx wrangler d1 execute yakult-sync --remote --file=./schema.sql
+```
+
+### 3. 设置两个密钥
+
+```powershell
+# 用你的口令生成哈希，把 你的口令 换掉后再执行
+node -e "crypto.subtle.digest('SHA-256',new TextEncoder().encode('yakult-sync:你的口令')).then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))"
+npx wrangler secret put SYNC_PASSPHRASE_HASH
+
+# 会话签名用的随机串
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+npx wrangler secret put SYNC_SECRET
+```
+
+### 4. 部署与使用
+
+推送后 Cloudflare 会带着绑定重新部署。之后：
+
+- 点顶栏「同步」→ 输入口令 → 登录并同步
+- 第一次登录时，如果云端为空，会把本机数据整包推上去；如果云端已有数据，会让你在「保留云端 / 用本地覆盖」之间选
+- 之后每次改动会在 8 秒后自动推送；断网时排队，恢复后自动补
+- 每台新设备登录一次即可看到全部数据（菜谱、菜单、书、照片、运势、设置）
+
+### 同步了什么、没同步什么
+
+| 同步 | 不���步 |
+|---|---|
+| 菜谱、菜单、设置、运势、新闻缓存 | **AI 的 `api_key`**（只留在本机，换设备需重填） |
+| 做饭照片（R2） | 浏览器里的新闻/照片缓存不占本机以外的地方 |
+| 书籍正文与阅读进度（R2） | — |
+
+单次上传上限 25 MB，超过的书会被跳过并在同步结果里提示。
+
+### 成本
+
+D1 与 R2 都在免费额度内（个人用量远低于），月费 0。

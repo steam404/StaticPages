@@ -1,5 +1,5 @@
 {
-  // Cloudflare Workers：静态资源 + /api/news 接口
+  // Cloudflare Workers：静态资源 + /api/news + /api/sync
   "name": "staticpages",
   "compatibility_date": "2026-10-01",
   "main": "src/worker.js",
@@ -7,4 +7,22 @@
     "directory": "./dist",
     "binding": "ASSETS"
   }
+
+  // ---- 多端同步（可选）----
+  // 默认关闭。按 README「多端同步」一节创建资源后，把下面两块前面的
+  // 注释去掉，并把 REPLACE_WITH_D1_DATABASE_ID 换成 d1 create 输出的 id。
+  //
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "yakult-sync",
+  //     "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+  //   }
+  // ],
+  // "r2_buckets": [
+  //   {
+  //     "binding": "BLOBS",
+  //     "bucket_name": "yakult-blobs"
+  //   }
+  // ]
 }

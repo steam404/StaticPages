@@ -1,9 +1,13 @@
 /**
- * Cloudflare Worker：静态资源 + /api/news（RSS 聚合）
+ * Cloudflare Worker：静态资源 + /api/news（RSS 聚合）+ /api/sync（多端同步）
  *
  * 静态站自己抓不了新闻（跨域限制），所以由 Worker 在边缘节点抓 RSS，
  * 前端只请求同域的 /api/news，没有任何 CORS 问题。
  */
+
+import { handleAuth } from './api/auth.js';
+import { handleSync } from './api/sync.js';
+import { handleBlob } from './api/blob.js';
 
 const FEEDS = [
   { id: 'bbc-zh', name: 'BBC 中文', url: 'https://feeds.bbci.co.uk/zhongwen/simp/rss.xml', lang: 'zh' },
@@ -119,13 +123,22 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname === '/api/news') {
-      try {
-        const { items, failed } = await collectNews();
-        return Response.json({ items, failed, updatedAt: Date.now() }, { headers: CORS });
-      } catch (err) {
-        return Response.json({ items: [], error: String(err) }, { status: 200, headers: CORS });
+    if (url.pathname.startsWith('/api/')) {
+      if (url.pathname === '/api/news') {
+        try {
+          const { items, failed } = await collectNews();
+          return Response.json({ items, failed, updatedAt: Date.now() }, { headers: CORS });
+        } catch (err) {
+          return Response.json({ items: [], error: String(err) }, { status: 200, headers: CORS });
+        }
       }
+
+      for (const handler of [handleAuth, handleSync, handleBlob]) {
+        const res = await handler(request, env, url);
+        if (res) return res;
+      }
+
+      return new Response('Not Found', { status: 404 });
     }
 
     return env.ASSETS.fetch(request);

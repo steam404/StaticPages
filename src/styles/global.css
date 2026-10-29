@@ -517,6 +517,126 @@ main {
 }
 
 /* ==========================================================
+   同步
+   ========================================================== */
+
+.sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.sync-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.sync-btn .dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.sync-btn[data-state='ok'] .dot {
+  background: #3f8f4f;
+}
+
+.sync-btn[data-state='dirty'] .dot {
+  background: #c9a227;
+}
+
+.sync-btn[data-state='busy'] .dot {
+  background: var(--accent);
+  animation: sync-pulse 1s infinite;
+}
+
+.sync-btn[data-state='out'] .dot {
+  background: var(--border);
+}
+
+@keyframes sync-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+dialog#sync-dialog,
+dialog#sync-conflict {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  width: min(26rem, calc(100vw - 2rem));
+  padding: 0;
+}
+
+dialog#sync-dialog::backdrop,
+dialog#sync-conflict::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+#sync-dialog .modal-inner,
+#sync-conflict .modal-inner {
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+#sync-dialog h2,
+#sync-conflict h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.sync-hint,
+.sync-msg {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.sync-msg {
+  min-height: 1.2em;
+}
+
+#sync-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+#sync-dialog input {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.sync-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* ==========================================================
    动效降级
    ========================================================== */
 

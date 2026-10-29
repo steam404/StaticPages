@@ -166,6 +166,7 @@ export function loadConfig() {
 
 export function saveConfig(config) {
   localStorage.setItem(KEY, JSON.stringify(config));
+  window.markSyncDirty?.();
 }
 
 export const isAiReady = config => Boolean(config.ai.enabled && config.ai.base_url && config.ai.api_key && config.ai.model);

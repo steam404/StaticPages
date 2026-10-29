@@ -25,8 +25,10 @@ const loadToday = () => {
   }
 };
 
-const saveToday = fortune =>
+const saveToday = fortune => {
   localStorage.setItem(KEY, JSON.stringify({ date: todayStr(), no: fortune.no }));
+  window.markSyncDirty?.();
+};
 
 let current = loadToday();
 let busy = false;

@@ -56,6 +56,10 @@ const active = href => (href === '/' ? path === '/' : path.startsWith(href));
           ))
         }
       </nav>
+      <button id="sync-btn" class="sync-btn" data-state="out" title="同步">
+        <span class="dot" aria-hidden="true"></span>
+        同步
+      </button>
     </header>
 
     <main>
@@ -68,5 +72,12 @@ const active = href => (href === '/' ? path === '/' : path.startsWith(href));
         {siteName} · 用 <a href="https://astro.build" rel="noopener">Astro</a> 构建
       </p>
     </footer>
+
+    <dialog id="sync-dialog"><div class="modal-inner" id="sync-app"></div></dialog>
+    <dialog id="sync-conflict"></dialog>
+
+    <script>
+      import '../scripts/sync.js';
+    </script>
   </body>
 </html>

@@ -26,7 +26,10 @@ const loadJSON = (k, fb) => {
   }
 };
 
-const saveJSON = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const saveJSON = (k, v) => {
+  localStorage.setItem(k, JSON.stringify(v));
+  window.markSyncDirty?.();
+};
 
 /* ============================== IndexedDB ============================== */
 
@@ -518,6 +521,7 @@ function pickTxt() {
       });
 
       toast(`已加入书架：${chapters.length} 章（${encoding}）`);
+      window.markSyncDirty?.();
       await render();
     } catch (err) {
       toast('解析失败：' + err.message);
@@ -542,6 +546,7 @@ async function saveProgress() {
   reader.scrollTop = body ? body.scrollTop : 0;
   reader.meta.progress = { chapter: reader.index, scroll: reader.scrollTop, updatedAt: Date.now() };
   await dbPut('books', reader.meta);
+  window.markSyncDirty?.();
 }
 
 async function goChapter(delta) {
