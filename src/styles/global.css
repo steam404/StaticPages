@@ -599,6 +599,35 @@ dialog#sync-conflict::backdrop {
   font-size: 1.05rem;
 }
 
+.sync-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sync-close {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s var(--ease), background-color 0.15s var(--ease);
+}
+
+.sync-close:hover {
+  color: var(--fg);
+  background: var(--surface-2);
+}
+
+.sync-note {
+  font-size: 0.76rem;
+  opacity: 0.8;
+}
+
 .sync-hint,
 .sync-msg {
   margin: 0;

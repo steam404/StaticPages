@@ -487,7 +487,10 @@ function paint() {
 function dialogHTML() {
   if (state.auth === 'out' || state.auth === 'unknown') {
     return `
-      <h2>多端同步</h2>
+      <div class="sync-head">
+        <h2>多端同步</h2>
+        <button class="sync-close" data-sync="close" aria-label="关闭">✕</button>
+      </div>
       <p class="sync-hint">输入你设置的口令，登录后本机数据会与云端合并。</p>
       <label>口令<input id="sync-pass" type="password" autocomplete="current-password" /></label>
       <p class="sync-msg">${esc(state.message)}</p>
@@ -497,10 +500,17 @@ function dialogHTML() {
       </div>`;
   }
 
+  const same = state.rev === state.serverRev;
   return `
-    <h2>多端同步</h2>
-    <p class="sync-hint">本地版本 ${state.rev} · 云端版本 ${state.serverRev}</p>
-    <p class="sync-msg">${esc(state.message || (state.dirty ? '有改动待同步' : '已是最新'))}</p>
+    <div class="sync-head">
+      <h2>多端同步</h2>
+      <button class="sync-close" data-sync="close" aria-label="关闭">✕</button>
+    </div>
+    <p class="sync-hint">
+      本地版本 ${state.rev} · 云端版本 ${state.serverRev}
+      <br /><span class="sync-note">版本号每同步一次加 1，只用来判断冲突，不是存了几份。</span>
+    </p>
+    <p class="sync-msg">${esc(state.message || (state.dirty ? '有改动待同步' : same ? '已是最新' : '云端有新版本'))}</p>
     <div class="sync-actions">
       <button class="btn-ghost" data-sync="logout">退出登录</button>
       <button class="btn-ghost" data-sync="force">用本地覆盖云端</button>
@@ -564,6 +574,11 @@ document.addEventListener('click', async e => {
 });
 
 document.getElementById('sync-btn')?.addEventListener('click', openDialog);
+
+// 点遮罩关闭（Esc 由 <dialog> 原生支持）
+document.getElementById('sync-dialog')?.addEventListener('click', e => {
+  if (e.target.id === 'sync-dialog') closeDialog();
+});
 
 window.addEventListener('online', () => {
   if (state.dirty && state.auth === 'in') syncNow();
