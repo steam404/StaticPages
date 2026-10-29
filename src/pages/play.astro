@@ -1,0 +1,233 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { GAMES } from '../data/games.js';
+
+const games = [...GAMES].sort((a, b) => b.rating - a.rating);
+
+/** 5 颗星，支持半星 */
+const stars = rating => {
+  let out = '';
+  for (let i = 1; i <= 5; i++) {
+    if (rating >= i) out += '<i class="on">★</i>';
+    else if (rating >= i - 0.5) out += '<i class="half">★</i>';
+    else out += '<i class="off">★</i>';
+  }
+  return out;
+};
+
+const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating));
+---
+
+<BaseLayout title="养乐多在玩什么" description="玩过并且愿意推荐的游戏，带星级和 Steam 链接。">
+  <div class="play">
+    <header class="play-head">
+      <h1>养乐多在玩什么</h1>
+      <p class="play-sub">玩过、而且愿意推荐的。按星级排，最高 5 星。</p>
+    </header>
+
+    <ul class="game-list">
+      {
+        games.map(game => (
+          <li class="game">
+            <div class="cover" aria-hidden="true">
+              {game.title.slice(0, 1)}
+            </div>
+
+            <div class="game-main">
+              <div class="game-title">
+                <h2>{game.title}</h2>
+                <span class="genre">{game.genre}</span>
+              </div>
+
+              <p class="en">{game.titleEn}</p>
+
+              <div class="rating" aria-label={`评分 ${fmt(game.rating)} 星，满分 5 星`}>
+                <span class="stars" set:html={stars(game.rating)} />
+                <span class="score">{fmt(game.rating)}</span>
+              </div>
+
+              <p class="reason">{game.reason}</p>
+
+              <a class="steam" href={game.steam} target="_blank" rel="noopener noreferrer">
+                Steam 商店 ↗
+              </a>
+            </div>
+          </li>
+        ))
+      }
+    </ul>
+
+    <p class="note">链接指向 Steam 商店搜索页，点进去就是对应游戏。国区可能搜不到部分作品，属正常情况。</p>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  .play {
+    max-width: 44rem;
+    margin: 0 auto;
+  }
+
+  .play-head h1 {
+    margin: 0.2rem 0 0.35rem;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .play-sub {
+    margin: 0 0 1.5rem;
+    color: var(--muted);
+    font-size: 0.94rem;
+  }
+
+  .game-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .game {
+    display: flex;
+    gap: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.85rem;
+    transition: border-color 0.15s;
+  }
+
+  .game:hover {
+    border-color: var(--accent);
+  }
+
+  .cover {
+    flex: none;
+    width: 3.6rem;
+    height: 4.8rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(150deg, #b4451d, #7a2f14);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+
+  .game:nth-child(3n + 2) .cover {
+    background: linear-gradient(150deg, #3f6ea8, #1f3c60);
+  }
+
+  .game:nth-child(3n + 3) .cover {
+    background: linear-gradient(150deg, #4a7a52, #24402a);
+  }
+
+  .game-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .game-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .game-title h2 {
+    margin: 0;
+    font-size: 1.02rem;
+  }
+
+  .genre {
+    font-size: 0.72rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0 0.5rem;
+    white-space: nowrap;
+  }
+
+  .en {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .rating {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0.2rem 0 0.1rem;
+  }
+
+  .stars i {
+    font-style: normal;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+  }
+
+  .stars i.on {
+    color: #e0a526;
+  }
+
+  .stars i.off {
+    color: var(--border);
+  }
+
+  .stars i.half {
+    background: linear-gradient(90deg, #e0a526 50%, var(--border) 50%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .score {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .reason {
+    margin: 0.3rem 0 0;
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: var(--muted);
+  }
+
+  .steam {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.15rem 0.7rem;
+  }
+
+  .steam:hover {
+    border-color: var(--accent);
+    text-decoration: none;
+  }
+
+  .note {
+    margin: 1.4rem 0 0;
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  @media (max-width: 480px) {
+    .cover {
+      width: 2.8rem;
+      height: 3.8rem;
+      font-size: 1.2rem;
+    }
+  }
+</style>
