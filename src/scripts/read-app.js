@@ -10,6 +10,7 @@
 import { parseChapters } from './chapter-parser.js';
 import { loadConfig, saveConfig, isAiReady } from './config.js';
 import { aiNews } from './ai.js';
+import { CLASSICS, CLASSIC_COUNT } from '../data/classics.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -104,6 +105,8 @@ let books = [];
 let tab = 'books'; // news | books
 let reader = null; // { meta, text, index }
 let fontSize = Number(localStorage.getItem(LS.font)) || 17;
+let bookView = 'shelf'; // shelf | classics
+let bookQuery = '';
 
 const app = () => document.getElementById('read-app');
 
@@ -126,47 +129,116 @@ async function readTextFile(file) {
 const sizeText = bytes =>
   bytes > 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
 
-/* ============================== 渲染：书架 ============================== */
+/* ============================== 渲染：书架 / 书单 ============================== */
+
+const normText = s => String(s || '').toLowerCase().replace(/\s+/g, '');
+
+function fuzzyHit(text, q) {
+  if (!q) return true;
+  let i = 0;
+  for (const ch of text) {
+    if (ch === q[i]) i++;
+    if (i === q.length) return true;
+  }
+  return false;
+}
+
+function matchShelf(b, q) {
+  if (!q) return true;
+  const t = normText(b.title);
+  return t.includes(q) || fuzzyHit(t, q);
+}
+
+function matchClassic(c, q) {
+  if (!q) return true;
+  return [c.title, c.author, c.era, c.intro].map(normText).some(f => f.includes(q) || fuzzyHit(f, q));
+}
+
+function bookCard(b) {
+  const total = b.chapters.length;
+  const done = b.progress?.chapter ?? 0;
+  const pct = total ? Math.round(((done + 1) / total) * 100) : 0;
+  return `
+    <article class="book" data-action="open-book" data-id="${b.id}">
+      <div class="book-cover">📖</div>
+      <div class="book-info">
+        <strong>${esc(b.title)}</strong>
+        <span class="muted">${total} 章 · ${sizeText(b.size)}</span>
+        <div class="book-progress"><span style="width:${Math.min(100, pct)}%"></span></div>
+        <span class="muted small">${b.progress ? `读到「${esc(b.chapters[done]?.title || '开始')}」` : '还没开始读'}</span>
+      </div>
+      <button class="icon danger" data-action="del-book" data-id="${b.id}" title="删除">✕</button>
+    </article>`;
+}
+
+function classicCard(c) {
+  return `
+    <a class="classic" href="${esc(c.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="classic-main">
+        <div class="classic-title">
+          <strong>${esc(c.title)}</strong>
+          <span class="muted small">${esc(c.author)} · ${esc(c.era)}</span>
+        </div>
+        <p class="classic-intro">${esc(c.intro)}</p>
+      </div>
+      <span class="classic-src">${esc(c.sourceName)} ↗</span>
+    </a>`;
+}
+
+async function bookListHTML() {
+  const q = normText(bookQuery);
+
+  if (bookView === 'classics') {
+    const list = CLASSICS.filter(c => matchClassic(c, q));
+    if (!list.length) return `<p class="empty">书单里没找到「${esc(bookQuery)}」</p>`;
+    return `<div class="classic-list">${list.map(classicCard).join('')}</div>`;
+  }
+
+  const list = books.filter(b => matchShelf(b, q));
+  if (list.length) return `<div class="book-list">${list.map(bookCard).join('')}</div>`;
+
+  if (books.length) return `<p class="empty">书架里没找到「${esc(bookQuery)}」</p>`;
+
+  return `
+    <div class="read-empty card">
+      <p class="big">📚</p>
+      <p>书架还是空的。上传一个 <code>.txt</code> 就能开始读。</p>
+      <p class="muted">文件只存在你这台设备的浏览器里，不会上传到任何服务器。</p>
+      <button class="btn-primary" data-action="upload">上传 TXT</button>
+    </div>`;
+}
 
 async function renderBooks() {
   books = (await dbGetAll('books')).sort((a, b) => b.createdAt - a.createdAt);
 
-  if (!books.length) {
-    return `
-      <div class="read-empty card">
-        <p class="big">📚</p>
-        <p>书架还是空的。上传一个 <code>.txt</code> 就能开始读。</p>
-        <p class="muted">文件只存在你这台设备的浏览器里，不会上传到任何服务器。</p>
-        <button class="btn-primary" data-action="upload">上传 TXT</button>
-      </div>`;
-  }
-
-  const cards = books
-    .map(b => {
-      const total = b.chapters.length;
-      const done = b.progress?.chapter ?? 0;
-      const pct = total ? Math.round(((done + 1) / total) * 100) : 0;
-      return `
-        <article class="book" data-action="open-book" data-id="${b.id}">
-          <div class="book-cover">📖</div>
-          <div class="book-info">
-            <strong>${esc(b.title)}</strong>
-            <span class="muted">${total} 章 · ${sizeText(b.size)}</span>
-            <div class="book-progress"><span style="width:${Math.min(100, pct)}%"></span></div>
-            <span class="muted small">${b.progress ? `读到「${esc(b.chapters[done]?.title || '开始')}」` : '还没开始读'}</span>
-          </div>
-          <button class="icon danger" data-action="del-book" data-id="${b.id}" title="删除">✕</button>
-        </article>`;
-    })
-    .join('');
-
   return `
     <div class="read-head">
-      <span class="muted">${books.length} 本</span>
+      <span class="muted">书架 ${books.length} 本</span>
       <button class="btn-primary" data-action="upload">＋ 上传 TXT</button>
     </div>
-    <div class="book-list">${cards}</div>
+
+    <input class="search" type="search" placeholder="搜书名 / 作者" value="${esc(bookQuery)}" data-action="book-search" autocomplete="off" />
+
+    <div class="chips">
+      <button class="chip ${bookView === 'shelf' ? 'active' : ''}" data-action="book-view" data-view="shelf">📚 我的书架</button>
+      <button class="chip ${bookView === 'classics' ? 'active' : ''}" data-action="book-view" data-view="classics">📖 经典书单 ${CLASSIC_COUNT}</button>
+    </div>
+
+    <div id="book-list">${await bookListHTML()}</div>
+
+    ${
+      bookView === 'classics'
+        ? '<p class="news-note">书单只含书目和简介。点一本去维基文库 / Gutenberg 找 txt，下载后拖进「我的书架」就能读。</p>'
+        : ''
+    }
   `;
+}
+
+async function updateBookList() {
+  if (tab !== 'books' || reader) return;
+  const box = app()?.querySelector('#book-list');
+  if (!box) return;
+  box.innerHTML = await bookListHTML();
 }
 
 /* ============================== 渲染：阅读器 ============================== */
@@ -561,6 +633,10 @@ document.addEventListener('click', async e => {
     case 'refresh-news':
       await refreshNews();
       break;
+    case 'book-view':
+      bookView = el.dataset.view;
+      await render();
+      break;
     case 'open-ai-settings':
       openAiSettings();
       break;
@@ -584,6 +660,27 @@ document.addEventListener(
   },
   true,
 );
+
+/* 书籍搜索：兼容中文输入法 */
+let bookComposing = false;
+
+document.addEventListener('compositionstart', e => {
+  if (e.target?.dataset?.action === 'book-search') bookComposing = true;
+});
+
+document.addEventListener('compositionend', e => {
+  if (e.target?.dataset?.action !== 'book-search') return;
+  bookComposing = false;
+  bookQuery = e.target.value;
+  updateBookList();
+});
+
+document.addEventListener('input', e => {
+  if (e.target?.dataset?.action !== 'book-search') return;
+  bookQuery = e.target.value;
+  if (bookComposing || e.isComposing) return;
+  updateBookList();
+});
 
 /* 启动 */
 render();
