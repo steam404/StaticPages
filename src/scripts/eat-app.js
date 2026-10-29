@@ -1,5 +1,6 @@
 import { estimateDish, suggest } from '../data/dishes.js';
 import { SEED_RECIPES, SEED_COUNT } from '../data/seed-recipes.js';
+import { foodImage } from '../data/food-images.js';
 import {
   loadConfig,
   saveConfig,
@@ -291,10 +292,10 @@ async function renderToday() {
 }
 
 async function mealCard(m) {
-  const photo = m.imageId ? await imgGet(m.imageId) : null;
+  const photo = (m.imageId ? await imgGet(m.imageId) : null) || foodImage(m.name) || null;
   return `
     <article class="meal">
-      ${photo ? `<img class="meal-photo" src="${photo}" alt="${esc(m.name)}" />` : ''}
+      ${photo ? `<img class="meal-photo" src="${photo}" alt="${esc(m.name)}" loading="lazy" />` : ''}
       <div class="meal-body">
         <div class="meal-title">
           <strong>${esc(m.name)}</strong>
@@ -359,10 +360,10 @@ async function libraryCardsHTML() {
 
   const cards = await Promise.all(
     list.map(async r => {
-      const photo = r.imageId ? await imgGet(r.imageId) : null;
+      const photo = (r.imageId ? await imgGet(r.imageId) : null) || foodImage(r.name) || null;
       return `
         <article class="recipe-open" data-action="recipe-edit" data-id="${r.id}">
-          ${photo ? `<img src="${photo}" alt="${esc(r.name)}" />` : '<div class="ph">🍳</div>'}
+          ${photo ? `<img src="${photo}" alt="${esc(r.name)}" loading="lazy" />` : '<div class="ph">🍳</div>'}
           ${
             photo
               ? ''
@@ -698,7 +699,7 @@ function readIngredientRows(dlg) {
 
 async function openRecipeForm(id) {
   const r = id ? recipes.find(x => x.id === id) : null;
-  const photo = r?.imageId ? await imgGet(r.imageId) : null;
+  const photo = (r?.imageId ? await imgGet(r.imageId) : null) || foodImage(r?.name) || null;
 
   openModal(`
     <h2>${r ? '编辑菜谱' : '新建菜谱'}</h2>
