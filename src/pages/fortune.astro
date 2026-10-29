@@ -138,26 +138,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     margin: 0.8rem 0 1.6rem;
   }
 
-  .fortune .btn-primary,
-  .fortune .btn-ghost {
-    font: inherit;
+  /* 按钮走 global.css，这里只放大一点 */
+  .fortune .btn-primary {
+    padding: 0.6rem 1.8rem;
     font-size: 0.95rem;
-    padding: 0.55rem 1.6rem;
-    border-radius: 999px;
-    cursor: pointer;
-    border: 1px solid var(--accent);
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .fortune .btn-primary:disabled {
-    opacity: 0.6;
-    cursor: default;
   }
 
   .fortune .btn-ghost {
-    background: transparent;
-    color: var(--accent);
     font-size: 0.85rem;
     padding: 0.4rem 1.1rem;
   }

@@ -75,12 +75,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   /* ---------- 通用 ---------- */
 
-  .read .card,
   .read-empty {
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--radius);
     padding: 1.6rem 1.2rem;
     text-align: center;
+    background: var(--surface);
   }
 
   .read-empty .big {
@@ -100,37 +100,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     font-size: 0.76rem;
   }
 
-  .read .btn-primary,
-  .read .btn-ghost,
-  #read-modal .btn-primary,
-  #read-modal .btn-ghost {
-    font: inherit;
-    font-size: 0.88rem;
-    border-radius: 8px;
-    padding: 0.4rem 0.85rem;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--fg);
-  }
-
-  .read .btn-primary,
-  #read-modal .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-
-  .read .btn-ghost:hover,
-  #read-modal .btn-ghost:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .read .btn-ghost:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
+  /* 按钮、胶囊、卡片统一走 global.css */
 
   .read .read-head {
     display: flex;
@@ -417,23 +387,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     flex-wrap: wrap;
     gap: 0.4rem;
     margin-bottom: 0.9rem;
-  }
-
-  .read .chip {
-    font: inherit;
-    font-size: 0.8rem;
-    padding: 0.2rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-  }
-
-  .read .chip.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
   }
 
   .read .rec-list {

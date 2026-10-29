@@ -16,6 +16,18 @@ const {
 const siteName = '养乐多的主页';
 const pageTitle = isPost ? `${title} · ${siteName}` : title;
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+
+const path = Astro.url.pathname;
+const links = [
+  { href: '/', label: '文章' },
+  { href: '/eat/', label: '吃什么' },
+  { href: '/read/', label: '看什么' },
+  { href: '/play/', label: '玩什么' },
+  { href: '/fortune/', label: '运势' },
+  { href: '/about/', label: '关于' },
+  { href: '/rss.xml', label: 'RSS' },
+];
+const active = href => (href === '/' ? path === '/' : path.startsWith(href));
 ---
 
 <!doctype html>
@@ -37,13 +49,13 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
     <header class="site-header">
       <a class="brand" href="/">{siteName}</a>
       <nav>
-        <a href="/">文章</a>
-        <a href="/eat/">吃什么</a>
-        <a href="/read/">看什么</a>
-        <a href="/play/">玩什么</a>
-        <a href="/fortune/">运势</a>
-        <a href="/about/">关于</a>
-        <a href="/rss.xml">RSS</a>
+        {
+          links.map(link => (
+            <a href={link.href} aria-current={active(link.href) ? 'page' : undefined}>
+              {link.label}
+            </a>
+          ))
+        }
       </nav>
     </header>
 

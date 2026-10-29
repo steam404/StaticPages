@@ -81,47 +81,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   /* ---------- 通用控件 ---------- */
 
-  .eat .btn,
-  .eat .btn-ghost,
-  .eat .btn-primary,
-  .eat .btn-danger,
-  #eat-modal .btn-ghost,
-  #eat-modal .btn-primary,
-  #eat-modal .btn-danger {
-    font: inherit;
-    font-size: 0.88rem;
-    border-radius: 8px;
-    padding: 0.4rem 0.8rem;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--fg);
-  }
-
-  .eat .btn:hover,
-  .eat .btn-ghost:hover,
-  #eat-modal .btn-ghost:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .eat .btn-primary,
-  #eat-modal .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-
-  .eat .btn-danger,
-  #eat-modal .btn-danger {
-    border-color: #d9534f;
-    color: #d9534f;
-  }
+  /* 按钮、胶囊、卡片统一走 global.css，这里只保留布局 */
 
   .eat .card {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1rem 1.1rem;
     margin-bottom: 1.2rem;
   }
 
@@ -134,15 +96,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .eat .muted {
     color: var(--muted);
     font-size: 0.88rem;
-  }
-
-  .eat .tag {
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0 0.45rem;
-    font-size: 0.72rem;
-    line-height: 1.6;
-    color: var(--muted);
   }
 
   .eat .tag-warn {
@@ -727,23 +680,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     flex-wrap: wrap;
     gap: 0.4rem;
     margin-bottom: 0.9rem;
-  }
-
-  .eat .chip {
-    font: inherit;
-    font-size: 0.8rem;
-    padding: 0.2rem 0.7rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-  }
-
-  .eat .chip.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
   }
 
   .eat .chip-ai {
