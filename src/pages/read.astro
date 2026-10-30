@@ -240,13 +240,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     overflow: hidden;
     height: calc(100vh - 17rem);
     min-height: 16rem;
-    padding: 1.1rem 1.3rem;
+    padding: 0.9rem 0.9rem;
     background: var(--surface);
   }
 
   .read .reader-page {
     white-space: pre-wrap;
-    word-break: break-word;
+    /* anywhere 会参与最小宽度计算，避免长串把整栏撑宽、右侧被裁掉 */
+    overflow-wrap: anywhere;
     line-height: 1.95;
     will-change: transform;
     transition: transform 0.18s var(--ease);
@@ -649,7 +650,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   @media (max-width: 480px) {
     .read .reader-view {
-      padding: 0.9rem;
+      padding: 0.7rem 0.6rem;
       height: calc(100vh - 15rem);
     }
 

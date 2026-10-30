@@ -369,6 +369,7 @@ function layoutReader() {
   const h = Math.max(120, view.clientHeight - padY);
 
   page.style.height = h + 'px';
+  page.style.width = w + 'px';
   page.style.columnWidth = w + 'px';
   page.style.columnGap = '0px';
   page.style.columnFill = 'auto';
