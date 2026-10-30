@@ -235,14 +235,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     white-space: nowrap;
   }
 
-  .read .reader-body {
-    padding: 1.2rem 1.3rem;
-    line-height: 1.95;
+  .read .reader-view {
+    position: relative;
+    overflow: hidden;
+    height: calc(100vh - 17rem);
+    min-height: 16rem;
+    padding: 1.1rem 1.3rem;
+    background: var(--surface);
+  }
+
+  .read .reader-page {
     white-space: pre-wrap;
     word-break: break-word;
-    overflow-y: auto;
-    max-height: calc(100vh - 15rem);
-    min-height: 18rem;
+    line-height: 1.95;
+    will-change: transform;
+    transition: transform 0.18s var(--ease);
   }
 
   .read .reader-foot {
@@ -641,13 +648,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   @media (max-width: 480px) {
-    .read .reader-body {
+    .read .reader-view {
       padding: 0.9rem;
-      max-height: calc(100vh - 13rem);
+      height: calc(100vh - 15rem);
     }
 
     .read .reader-foot {
       flex-wrap: wrap;
+    }
+
+    .read .reader-foot .btn-ghost {
+      padding: 4px 8px;
+      font-size: 11px;
     }
   }
 </style>

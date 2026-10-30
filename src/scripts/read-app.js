@@ -296,6 +296,7 @@ function renderReader() {
   const { meta, text, index } = reader;
   const ch = meta.chapters[index];
   const body = text.slice(ch.start, ch.end).trim();
+  const last = index >= meta.chapters.length - 1;
 
   return `
     <div class="reader">
@@ -308,12 +309,16 @@ function renderReader() {
         <button class="btn-ghost" data-action="toc">目录</button>
       </header>
 
-      <div class="reader-body" id="reader-body" style="font-size:${fontSize}px">${esc(body)}</div>
+      <div class="reader-view" id="reader-view">
+        <div class="reader-page" id="reader-page" style="font-size:${fontSize}px">${esc(body)}</div>
+      </div>
 
       <footer class="reader-foot">
-        <button class="btn-ghost" data-action="prev-ch" ${index === 0 ? 'disabled' : ''}>上一章</button>
-        <span class="reader-pos">${index + 1} / ${meta.chapters.length}</span>
-        <button class="btn-ghost" data-action="next-ch" ${index === meta.chapters.length - 1 ? 'disabled' : ''}>下一章</button>
+        <button class="btn-ghost" data-action="prev-ch" ${index === 0 ? 'disabled' : ''}>⏮ 上一章</button>
+        <button class="btn-ghost" data-action="prev-page">‹ 上一页</button>
+        <span class="reader-pos" id="reader-pos"></span>
+        <button class="btn-ghost" data-action="next-page">下一页 ›</button>
+        <button class="btn-ghost" data-action="next-ch" ${last ? 'disabled' : ''}>下一章 ⏭</button>
         <span class="reader-font">
           <button class="icon" data-action="font-minus" title="缩小">A－</button>
           <button class="icon" data-action="font-plus" title="放大">A＋</button>
@@ -321,6 +326,86 @@ function renderReader() {
       </footer>
     </div>
   `;
+}
+
+/* 分页：用 CSS 多栏排好，再横向平移显示第 n 页 */
+function layoutReader() {
+  const view = document.getElementById('reader-view');
+  const page = document.getElementById('reader-page');
+  if (!view || !page || !reader) return;
+
+  const cs = getComputedStyle(view);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const w = Math.max(200, view.clientWidth - padX);
+  const h = Math.max(120, view.clientHeight - padY);
+
+  page.style.height = h + 'px';
+  page.style.columnWidth = w + 'px';
+  page.style.columnGap = '0px';
+  page.style.columnFill = 'auto';
+
+  // 强制回流后再量总宽
+  const scrollW = page.scrollWidth;
+  const total = Math.max(1, Math.round(scrollW / w));
+  reader.pages = total;
+  // 浏览器可能把栏宽取整，用实测总宽反推每页宽度，避免翻页累积偏移
+  reader.pageWidth = scrollW > w ? scrollW / total : w;
+
+  if (reader.pendingEdge === 'last') {
+    reader.page = total - 1;
+    reader.pendingEdge = null;
+  }
+  reader.page = Math.min(Math.max(0, reader.page || 0), total - 1);
+
+  applyPage();
+}
+
+function applyPage() {
+  const view = document.getElementById('reader-view');
+  const page = document.getElementById('reader-page');
+  if (!view || !page || !reader) return;
+
+  const cs = getComputedStyle(view);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const w = Math.max(200, view.clientWidth - padX);
+  const step = reader.pageWidth || w;
+
+  page.style.transform = `translateX(${-reader.page * step}px)`;
+  updateReaderPos();
+}
+
+function updateReaderPos() {
+  const pos = document.getElementById('reader-pos');
+  if (!pos || !reader) return;
+
+  const pages = reader.pages || 1;
+  const chapters = reader.meta.chapters.length;
+  pos.textContent = `第 ${reader.page + 1} / ${pages} 页 · ${reader.index + 1} / ${chapters} 章`;
+
+  const prevPage = document.querySelector('[data-action="prev-page"]');
+  const nextPage = document.querySelector('[data-action="next-page"]');
+  if (prevPage) prevPage.disabled = reader.page === 0 && reader.index === 0;
+  if (nextPage) nextPage.disabled = reader.page >= pages - 1 && reader.index >= chapters - 1;
+}
+
+async function goPage(delta) {
+  if (!reader) return;
+  const pages = reader.pages || 1;
+  const next = reader.page + delta;
+
+  if (next < 0) {
+    if (reader.index > 0) await goChapter(-1, 'last');
+    return;
+  }
+  if (next >= pages) {
+    if (reader.index < reader.meta.chapters.length - 1) await goChapter(1, 'first');
+    return;
+  }
+
+  reader.page = next;
+  applyPage();
+  await saveProgress();
 }
 
 /* ============================== 渲染：全球新闻 ============================== */
@@ -501,8 +586,8 @@ async function render() {
 
   document.querySelectorAll('[data-rtab]').forEach(b => b.classList.toggle('active', b.dataset.rtab === tab));
   if (reader) {
-    const body = document.getElementById('reader-body');
-    if (body) body.scrollTop = reader.scrollTop || 0;
+    // 等布局稳定再分页（字体、宽度都要算进去）
+    requestAnimationFrame(() => layoutReader());
   }
 }
 
@@ -579,26 +664,39 @@ async function openBook(id) {
   const text = await dbGet('texts', id);
   if (!meta || !text) return toast('这本书的数据丢了，重新上传一次吧');
 
-  reader = { meta, text, index: meta.progress?.chapter ?? 0, scrollTop: meta.progress?.scroll ?? 0 };
+  const chapter = Math.min(meta.progress?.chapter ?? 0, Math.max(0, meta.chapters.length - 1));
+  reader = {
+    meta,
+    text,
+    index: chapter,
+    page: meta.progress?.page ?? 0,
+    pages: 1,
+    pendingEdge: null,
+  };
   await render();
 }
 
 async function saveProgress() {
   if (!reader) return;
-  const body = document.getElementById('reader-body');
-  reader.scrollTop = body ? body.scrollTop : 0;
-  reader.meta.progress = { chapter: reader.index, scroll: reader.scrollTop, updatedAt: Date.now() };
+  reader.meta.progress = {
+    chapter: reader.index,
+    page: reader.page,
+    updatedAt: Date.now(),
+  };
   await dbPut('books', reader.meta);
   window.markSyncDirty?.();
 }
 
-async function goChapter(delta) {
+async function goChapter(delta, edge = 'first') {
   if (!reader) return;
   const next = reader.index + delta;
   if (next < 0 || next >= reader.meta.chapters.length) return;
+
   reader.index = next;
-  reader.scrollTop = 0;
+  reader.page = 0;
+  reader.pendingEdge = edge === 'last' ? 'last' : null;
   await render();
+  layoutReader();
   await saveProgress();
 }
 
@@ -671,10 +769,16 @@ document.addEventListener('click', async e => {
       await render();
       break;
     case 'prev-ch':
-      await goChapter(-1);
+      await goChapter(-1, 'first');
       break;
     case 'next-ch':
-      await goChapter(1);
+      await goChapter(1, 'first');
+      break;
+    case 'prev-page':
+      await goPage(-1);
+      break;
+    case 'next-page':
+      await goPage(1);
       break;
     case 'toc':
       await openToc();
@@ -683,18 +787,27 @@ document.addEventListener('click', async e => {
       const idx = Number(el.dataset.idx);
       if (!reader || Number.isNaN(idx)) break;
       reader.index = idx;
-      reader.scrollTop = 0;
+      reader.page = 0;
+      reader.pendingEdge = null;
       closeModal();
       await render();
+      layoutReader();
       await saveProgress();
       break;
     }
     case 'font-plus':
     case 'font-minus': {
+      const before = reader ? { page: reader.page || 0, pages: reader.pages || 1 } : null;
       fontSize = Math.min(28, Math.max(13, fontSize + (action === 'font-plus' ? 1 : -1)));
       localStorage.setItem(LS.font, String(fontSize));
-      const body = document.getElementById('reader-body');
-      if (body) body.style.fontSize = fontSize + 'px';
+
+      if (reader) {
+        const ratio = before.pages > 1 ? before.page / (before.pages - 1) : 0;
+        await render();
+        const pages = reader.pages || 1;
+        reader.page = Math.round(ratio * (pages - 1));
+        applyPage();
+      }
       break;
     }
     case 'refresh-news':
@@ -721,17 +834,33 @@ document.addEventListener('click', async e => {
   }
 });
 
-/* 记录阅读位置 */
-let scrollTimer = null;
-document.addEventListener(
-  'scroll',
-  e => {
-    if (e.target?.id !== 'reader-body' || !reader) return;
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(saveProgress, 600);
-  },
-  true,
-);
+/* 窗口尺寸变化：重新分页，尽量停在原来的进度 */
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  if (!reader) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const pages = reader.pages || 1;
+    const ratio = pages > 1 ? (reader.page || 0) / (pages - 1) : 0;
+    layoutReader();
+    reader.page = Math.round(ratio * ((reader.pages || 1) - 1));
+    applyPage();
+  }, 150);
+});
+
+/* 键盘翻页：← → PageUp PageDown 空格 */
+document.addEventListener('keydown', e => {
+  if (!reader) return;
+  if (e.target instanceof HTMLElement && e.target.matches('input, textarea, select')) return;
+
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+    e.preventDefault();
+    goPage(-1);
+  } else if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+    e.preventDefault();
+    goPage(1);
+  }
+});
 
 /* 书籍搜索：兼容中文输入法 */
 let bookComposing = false;
