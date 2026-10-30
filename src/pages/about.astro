@@ -1,31 +1,35 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { SEED_COUNT } from '../data/seed-recipes.js';
+import { REC_COUNT } from '../data/recommends.js';
+import { GAME_COUNT } from '../data/games.js';
 ---
 
-<BaseLayout title="关于" description="关于养乐多和这个站点。">
+<BaseLayout title="关于" description="关于养乐多：医疗超声从业者，养了三只猫一只狗，做饭、打游戏、偶尔写点东西。">
   <article class="post">
     <header>
       <h1>关于</h1>
     </header>
 
     <div class="prose">
-      <p>我是养乐多。做饭、看书、打游戏，偶尔写点东西。</p>
+      <p>我是养乐多，从事医疗超声行业，养了三只猫一只狗，做饭、打游戏，偶尔写点东西。</p>
 
       <p>这个站点是几件小事的容器：</p>
 
       <ul>
         <li>
           <a href="/eat/"><strong>吃什么</strong></a
-          >：记录每天吃了什么、热量和营养，内置 150 道菜谱，还能让 AI 帮你估热量。
+          >：记录每天吃了什么、热量和营养，内置 {SEED_COUNT} 道菜谱，支持照片识别快速上传菜谱，还能让 AI 帮你估热量。
         </li>
         <li>
           <a href="/read/"><strong>看什么</strong></a
-          >：每天从 BBC、纽约时报中文网、卫报等抓几条要闻；另有 32 本我读过的书，
-          和一个能解析章节的 TXT 阅读器。
+          >：从 BBC、纽约时报中文网、卫报等抓几条要闻——<em>声明：是 AI 抓的，我没看过！</em>；
+          另有我推荐过的 {REC_COUNT} 本书，和一个能解析章节的 TXT 阅读器；
+          后续可能会加电影推荐、友链之类的。
         </li>
         <li>
           <a href="/play/"><strong>玩什么</strong></a
-          >：玩过并且愿意推荐的 16 款游戏，带星级和 Steam 商店链接。
+          >：玩过并且愿意推荐的 {GAME_COUNT} 款游戏，后面可能会更新更多功能。
         </li>
         <li>
           <a href="/fortune/"><strong>运势</strong></a
@@ -39,10 +43,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </ul>
 
       <h2>关于本站</h2>
-      <p>
-        Astro 静态生成，部署在 Cloudflare Workers。菜谱、书、摇签结果都存在你自己的浏览器里，
-        不上传服务器。没有追踪脚本，没有广告。
-      </p>
+      <p>Astro 静态生成，部署在 Cloudflare Workers。Enjoy</p>
     </div>
   </article>
 
