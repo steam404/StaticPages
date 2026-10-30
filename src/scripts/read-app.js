@@ -148,8 +148,7 @@ const app = () => document.getElementById('read-app');
 /* ============================== TXT 解析 ============================== */
 
 /** 优先按 UTF-8 解码，失败再试 GBK（中文小说常见） */
-async function readTextFile(file) {
-  const buf = await file.arrayBuffer();
+function decodeBytes(buf) {
   try {
     return { text: new TextDecoder('utf-8', { fatal: true }).decode(buf), encoding: 'UTF-8' };
   } catch {
@@ -159,6 +158,10 @@ async function readTextFile(file) {
       return { text: new TextDecoder('utf-8').decode(buf), encoding: 'UTF-8(容错)' };
     }
   }
+}
+
+async function readTextFile(file) {
+  return decodeBytes(await file.arrayBuffer());
 }
 
 const sizeText = bytes =>
@@ -189,20 +192,146 @@ function matchRec(r, q) {
   return [r.title, r.author, r.cat, r.intro, r.reason].map(normText).some(f => f.includes(q) || fuzzyHit(f, q));
 }
 
+/* ---------- 在线书库（GitHub: hankinghu/literature-books） ---------- */
+
+let libIndex = null;
+let libLoading = null;
+
+async function loadLibIndex() {
+  if (libIndex) return libIndex;
+  if (libLoading) return libLoading;
+
+  libLoading = (async () => {
+    try {
+      const res = await fetch('/book-library.json', { cache: 'force-cache' });
+      const data = await res.json();
+      libIndex = Array.isArray(data.books) ? data.books : [];
+    } catch {
+      libIndex = [];
+    }
+    return libIndex;
+  })();
+
+  return libLoading;
+}
+
+function matchLib(b, q) {
+  const t = normText(b.title);
+  return t.includes(q) || fuzzyHit(t, q);
+}
+
+function libCard(b) {
+  const inShelf = books.some(x => normText(x.title) === normText(b.title));
+
+  return `
+    <article class="book lib-book">
+      <div class="book-cover">📥</div>
+      <div class="book-info">
+        <strong>${esc(b.title)}</strong>
+        <span class="muted">${sizeText(b.size || 0)} · 在线书库</span>
+      </div>
+      ${
+        inShelf
+          ? '<span class="book-rate">已在书架</span>'
+          : `<button class="btn-primary" data-action="import-lib" data-path="${esc(b.path)}">下载导入</button>`
+      }
+    </article>`;
+}
+
+async function importLib(btn) {
+  const path = btn.dataset.path;
+  if (!path) return;
+
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '下载中…';
+
+  try {
+    const res = await fetch('/api/book?path=' + encodeURIComponent(path));
+    if (!res.ok) throw new Error(`下载失败（${res.status}）`);
+
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > 25 * 1024 * 1024) throw new Error('文件超过 25 MB');
+
+    btn.textContent = '解析中…';
+    const { text, encoding } = decodeBytes(buf);
+    const chapters = withByteOffsets(parseChapters(text), text);
+    const id = uid();
+    const title = path.split('/').pop().replace(/\.txt$/i, '');
+
+    await dbPut('texts', new Blob([text], { type: 'text/plain;charset=utf-8' }), id);
+    const meta = {
+      id,
+      title,
+      size: buf.byteLength,
+      encoding,
+      chapters,
+      createdAt: Date.now(),
+      progress: null,
+    };
+    await dbPut('books', meta);
+    window.markSyncDirty?.();
+
+    toast(`已导入《${title}》${chapters.length} 章，正在匹配豆瓣…`);
+    await enrichDouban(meta);
+    await render();
+    toast(`《${title}》已加入书架`);
+  } catch (err) {
+    toast('导入失败：' + err.message);
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+/** 用豆瓣补封面、评分和书目链接（找不到就跳过） */
+async function enrichDouban(meta) {
+  try {
+    const res = await fetch('/api/douban?q=' + encodeURIComponent(meta.title));
+    const data = await res.json();
+    const m = data.match;
+    if (!m) return;
+
+    meta.douban = {
+      title: m.title,
+      author: m.author,
+      cover: m.cover,
+      url: m.douban,
+      rating: m.rating,
+    };
+    await dbPut('books', meta);
+    window.markSyncDirty?.();
+  } catch {
+    /* 匹配失败不影响阅读 */
+  }
+}
+
 function bookCard(b) {
   const total = b.chapters.length;
   const done = b.progress?.chapter ?? 0;
   const pct = total ? Math.round(((done + 1) / total) * 100) : 0;
+
+  const d = b.douban || null;
+  const cover = d?.cover
+    ? `<img class="book-thumb" src="/api/cover?u=${encodeURIComponent(d.cover)}" alt="" loading="lazy" onerror="this.remove()" />`
+    : `<div class="book-cover">📖</div>`;
+  const rating = d?.rating ? `<span class="book-rate">★ ${Number(d.rating).toFixed(1)}</span>` : '';
+  const link = d?.url
+    ? `<a class="book-src" data-action="open-douban" data-url="${esc(d.url)}" href="${esc(d.url)}" target="_blank" rel="noopener noreferrer">豆瓣 ↗</a>`
+    : '';
+
   return `
     <article class="book" data-action="open-book" data-id="${b.id}">
-      <div class="book-cover">📖</div>
+      ${cover}
       <div class="book-info">
-        <strong>${esc(b.title)}</strong>
-        <span class="muted">${total} 章 · ${sizeText(b.size)}</span>
+        <strong>${esc(b.title)}${rating}</strong>
+        <span class="muted">${total} 章 · ${sizeText(b.size)}${d?.author ? ` · ${esc(d.author)}` : ''}</span>
         <div class="book-progress"><span style="width:${Math.min(100, pct)}%"></span></div>
         <span class="muted small">${b.progress ? `读到「${esc(b.chapters[done]?.title || '开始')}」` : '还没开始读'}</span>
       </div>
-      <button class="icon danger" data-action="del-book" data-id="${b.id}" title="删除">✕</button>
+      <div class="book-actions">
+        ${link}
+        <button class="icon danger" data-action="del-book" data-id="${b.id}" title="删除">✕</button>
+      </div>
     </article>`;
 }
 
@@ -238,15 +367,24 @@ function recCard(r) {
 async function bookListHTML() {
   const q = normText(bookQuery);
 
-  /* 搜索时同时找书架和推荐 */
+  /* 搜索时同时找书架、推荐和在线书库 */
   if (q) {
     const shelf = books.filter(b => matchShelf(b, q));
     const recs = RECOMMENDS.filter(r => matchRec(r, q));
-    if (!shelf.length && !recs.length) return `<p class="empty">没找到「${esc(bookQuery)}」</p>`;
+    const lib = (await loadLibIndex()).filter(b => matchLib(b, q)).slice(0, 12);
+
+    if (!shelf.length && !recs.length && !lib.length) {
+      return `<p class="empty">没找到「${esc(bookQuery)}」</p>`;
+    }
 
     return `
       ${shelf.length ? `<p class="book-group">我的书架 · ${shelf.length}</p><div class="book-list">${shelf.map(bookCard).join('')}</div>` : ''}
       ${recs.length ? `<p class="book-group">养乐多的推荐 · ${recs.length}</p><div class="rec-list">${recs.map(recCard).join('')}</div>` : ''}
+      ${
+        lib.length
+          ? `<p class="book-group">在线书库 · ${lib.length}</p><div class="book-list">${lib.map(libCard).join('')}</div>`
+          : ''
+      }
     `;
   }
 
@@ -825,6 +963,12 @@ document.addEventListener('click', async e => {
       break;
     case 'open-book':
       await openBook(el.dataset.id);
+      break;
+    case 'import-lib':
+      await importLib(el);
+      break;
+    case 'open-douban':
+      // 让 <a> 自己打开新标签，别触发外层卡片的「打开书」
       break;
     case 'del-book': {
       e.stopPropagation();
