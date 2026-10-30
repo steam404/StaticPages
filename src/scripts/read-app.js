@@ -232,7 +232,7 @@ async function renderBooks() {
 
     ${
       bookView === 'recs'
-        ? '<p class="news-note">点书名可以展开推荐理由。都是读完有印象的，不是必读书单。</p>'
+        ? '<p class="news-note">都是读完有印象的，不是必读书单。</p>'
         : ''
     }
   `;
@@ -350,14 +350,12 @@ function renderNews() {
         : `<div class="read-empty card">
              <p class="big">🌍</p>
              <p>点「刷新」，拉一次今天的全球要闻。</p>
-             ${ready ? '' : '<p class="muted small">如果 RSS 接口没部署，会回退到 AI，需要先在右上角 ⚙ 填 Key。</p>'}
+             ${ready ? '' : '<p class="muted small">先在右上角 ⚙ 填 Key。</p>'}
            </div>`
     }
 
     <p class="news-note">${
-      fromRss
-        ? '来自 BBC、纽约时报中文网、卫报等媒体的 RSS，点标题看原文。'
-        : '内容由 AI 整理，时效性取决于所用模型是否能联网。'
+      fromRss ? '来自 BBC、纽约时报、卫报等。点标题看原文。' : '由 AI 整理，仅供参考。'
     }</p>
   `;
 }

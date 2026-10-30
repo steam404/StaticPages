@@ -22,7 +22,7 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
   <div class="play">
     <header class="play-head">
       <h1>养乐多在玩什么</h1>
-      <p class="play-sub">玩过、而且愿意推荐的。按星级排，最高 5 星。</p>
+      <p class="play-sub">玩过、而且愿意推荐的。按星级排。</p>
     </header>
 
     <ul class="game-list">
@@ -63,8 +63,6 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
         ))
       }
     </ul>
-
-    <p class="note">链接指向 Steam 官方商店页（appid 已逐个核对）。如果打不开，多半是网络访问不了 Steam，不是链接写错。</p>
   </div>
 </BaseLayout>
 
@@ -235,12 +233,6 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
   .steam:hover {
     border-color: var(--accent);
     text-decoration: none;
-  }
-
-  .note {
-    margin: 1.4rem 0 0;
-    font-size: 0.76rem;
-    color: var(--muted);
   }
 
   @media (max-width: 480px) {

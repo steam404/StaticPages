@@ -506,10 +506,7 @@ function dialogHTML() {
       <h2>多端同步</h2>
       <button class="sync-close" data-sync="close" aria-label="关闭">✕</button>
     </div>
-    <p class="sync-hint">
-      本地版本 ${state.rev} · 云端版本 ${state.serverRev}
-      <br /><span class="sync-note">版本号每同步一次加 1，只用来判断冲突，不是存了几份。</span>
-    </p>
+    <p class="sync-hint">本地版本 ${state.rev} · 云端版本 ${state.serverRev}</p>
     <p class="sync-msg">${esc(state.message || (state.dirty ? '有改动待同步' : same ? '已是最新' : '云端有新版本'))}</p>
     <div class="sync-actions">
       <button class="btn-ghost" data-sync="logout">退出登录</button>

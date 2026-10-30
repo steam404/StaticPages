@@ -623,11 +623,6 @@ dialog#sync-conflict::backdrop {
   background: var(--surface-2);
 }
 
-.sync-note {
-  font-size: 0.76rem;
-  opacity: 0.8;
-}
-
 .sync-hint,
 .sync-msg {
   margin: 0;
