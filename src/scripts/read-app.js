@@ -369,23 +369,40 @@ function layoutReader() {
   const h = Math.max(120, view.clientHeight - padY);
 
   page.style.height = h + 'px';
-  page.style.width = w + 'px';
-  page.style.columnWidth = w + 'px';
+
+  // 栏宽比可视宽度再窄 SAFETY 像素，任何亚像素溢出都落在留白里，不会切字
+  const SAFETY = 10;
+  const colW = Math.max(180, w - SAFETY);
+  page.style.width = colW + 'px';
+  page.style.columnWidth = colW + 'px';
   page.style.columnGap = '0px';
   page.style.columnFill = 'auto';
 
   // 强制回流后再量总宽
   const scrollW = page.scrollWidth;
-  const total = Math.max(1, Math.round(scrollW / w));
+  const total = Math.max(1, Math.round(scrollW / colW));
   reader.pages = total;
-  // 浏览器可能把栏宽取整，用实测总宽反推每页宽度，避免翻页累积偏移
-  reader.pageWidth = scrollW > w ? scrollW / total : w;
+  // 用实测总宽反推每页宽度，避免浏览器取整导致翻页累积偏移
+  reader.pageWidth = scrollW > colW ? scrollW / total : colW;
 
   if (reader.pendingEdge === 'last') {
     reader.page = total - 1;
     reader.pendingEdge = null;
   }
   reader.page = Math.min(Math.max(0, reader.page || 0), total - 1);
+  reader.lastWidth = view.clientWidth;
+
+  // 容器尺寸变了（旋转屏幕、拖动窗口）就重排
+  if (!reader.roAttached && typeof ResizeObserver !== 'undefined') {
+    reader.roAttached = true;
+    const ro = new ResizeObserver(() => {
+      if (!reader) return;
+      const el = document.getElementById('reader-view');
+      if (!el || el.clientWidth === reader.lastWidth) return;
+      layoutReader();
+    });
+    ro.observe(view);
+  }
 
   applyPage();
 }
@@ -908,6 +925,13 @@ document.addEventListener('click', async e => {
       break;
   }
 });
+
+/* 像素字体加载完成后字宽会变，重新分页一次 */
+if (document.fonts?.ready) {
+  document.fonts.ready.then(() => {
+    if (reader) layoutReader();
+  });
+}
 
 /* 窗口尺寸变化：重新分页，尽量停在原来的进度 */
 let resizeTimer = null;
