@@ -80,6 +80,7 @@ html {
 
 body {
   margin: 0;
+  padding-bottom: 64px; /* 让固定地面条不遮住页面最后一行 */
   background: var(--bg);
   color: var(--fg);
   font-family: var(--pixel-font);
@@ -168,9 +169,9 @@ main,
 .brand::before {
   content: '';
   display: inline-block;
-  width: 16px;
-  height: 28px;
-  background: url('/sprites/coin.png') no-repeat center / contain;
+  width: 24px;
+  height: 48px;
+  background: url('/sprites/toad.png') no-repeat center / contain;
   image-rendering: pixelated;
 }
 
@@ -226,10 +227,10 @@ main {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 48px;
+  height: 64px;
   background: var(--ground-brown);
   border-top: 4px solid var(--deep-brown);
-  z-index: 50;
+  z-index: 90;
   overflow: hidden;
   image-rendering: pixelated;
 }
@@ -253,12 +254,12 @@ main {
 
 .mario-run {
   position: absolute;
-  bottom: 4px;
+  bottom: 2px;
   left: 0;
-  width: 24px;
-  height: 44px;
+  width: 32px;
+  height: 58px;
   image-rendering: pixelated;
-  animation: mario-run-anim 12s linear infinite;
+  animation: mario-run-anim 10s linear infinite;
 }
 
 @keyframes mario-run-anim {
