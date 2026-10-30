@@ -718,6 +718,7 @@ async function openToc() {
         .join('')}
     </div>
     <div class="modal-actions">
+      <button class="btn-ghost" data-action="reparse">重新识别章节</button>
       <button class="btn-ghost" data-action="modal-close">关闭</button>
     </div>
   `);
@@ -828,6 +829,21 @@ document.addEventListener('click', async e => {
     case 'save-ai':
       saveAiSettings();
       break;
+    case 'reparse': {
+      if (!reader) break;
+      const before = reader.meta.chapters.length;
+      reader.meta.chapters = parseChapters(reader.text);
+      reader.index = Math.min(reader.index, reader.meta.chapters.length - 1);
+      reader.page = 0;
+      reader.pendingEdge = null;
+      closeModal();
+      await dbPut('books', reader.meta);
+      window.markSyncDirty?.();
+      await render();
+      layoutReader();
+      toast(`重新识别：${before} → ${reader.meta.chapters.length} 章`);
+      break;
+    }
     case 'modal-close':
       closeModal();
       break;

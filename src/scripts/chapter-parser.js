@@ -49,10 +49,19 @@ const RULES = [
   },
 ];
 
+/** 去掉包裹的括号/书名号，便于匹配「【第一章】」这类写法 */
+function normalizeLine(raw) {
+  return String(raw)
+    .trim()
+    .replace(/^[【\[（(「『《]+/, '')
+    .replace(/[】\]）)」』》]+$/, '')
+    .trim();
+}
+
 /** 这一行像不像章节标题 */
 function matchLine(line) {
-  const t = String(line).trim();
-  if (!t || t.length > 40) return null;
+  const t = normalizeLine(line);
+  if (!t || t.length > 50) return null;
   if (BAD_END.test(t)) return null;
   // 全是标点或纯数字的不算
   if (!/[\u4e00-\u9fa5A-Za-z0-9]/.test(t)) return null;
@@ -63,7 +72,7 @@ function matchLine(line) {
 
     // 「第X章」后面必须没有句读，且标题部分不能太长
     const tail = (m[2] || '').trim();
-    if (tail.length > 30) continue;
+    if (tail.length > 40) continue;
 
     return { title: rule.make(m, t), weight: rule.weight, rule: rule.name };
   }
@@ -120,20 +129,20 @@ function scoreCandidates(text, hits) {
 }
 
 /** 把「太短、明显是目录」的章节并进相邻章，避免出现几十个空章 */
-function mergeShortChapters(chapters) {
-  const MIN = 120;
+/**
+ * 只合并「开头部分、极短」的候选（多半是没被识别成目录块的目录条目）。
+ * 正文里的短章节要保留，不能一起吞掉。
+ */
+function mergeShortChapters(chapters, limit) {
+  const MIN = 30;
   const merged = [];
 
   for (let i = 0; i < chapters.length; i++) {
     const c = chapters[i];
     const len = c.end - c.start;
 
-    if (len < MIN && i + 1 < chapters.length) {
+    if (len < MIN && c.start < limit && i + 1 < chapters.length) {
       chapters[i + 1].start = c.start; // 并进下一章
-      continue;
-    }
-    if (len < MIN && merged.length) {
-      merged[merged.length - 1].end = c.end; // 末章太短，并进上一章
       continue;
     }
     merged.push(c);
@@ -144,9 +153,10 @@ function mergeShortChapters(chapters) {
 /**
  * 去掉开头的目录块：
  * 连续 ≥5 个候选、彼此间隔 < 60 字，几乎可以肯定是目录列表。
- * 目录的文本不丢，并进后面第一个正文章节。
+ * 只在前 10% 的文本里判断，避免误伤正文中连续出现的短章节。
  */
-function dropTocRuns(hits) {
+function dropTocRuns(hits, textLength) {
+  const limit = textLength * 0.1;
   const out = [];
   let pendingStart = -1;
   let i = 0;
@@ -156,7 +166,7 @@ function dropTocRuns(hits) {
     while (j + 1 < hits.length && hits[j + 1].start - hits[j].start < 60) j++;
 
     const runLength = j - i + 1;
-    if (runLength >= 5) {
+    if (runLength >= 5 && hits[i].start < limit) {
       if (pendingStart < 0) pendingStart = hits[i].start;
       i = j + 1;
       continue;
@@ -202,20 +212,26 @@ export function parseChapters(text) {
 
   const lines = splitLines(src);
 
-  let best = null;
-  for (const rule of RULES) {
-    const hits = collectByRule(lines, rule.name);
-    const score = scoreCandidates(src, hits) + rule.weight;
-    if (score < 0) continue;
-    if (!best || score > best.score) best = { score, hits, rule: rule.name };
+  // 1) 先全量扫一遍「第X章/节/回」。只要够 3 条就直接采用，
+  //    不再让打分或兜底规则把它挤掉 —— 这类标题几乎不会误判。
+  const strictHits = collectByRule(lines, '第X章');
+  const names = new Set();
+
+  if (strictHits.length >= 3) {
+    for (const n of ['第X章', '序章/楔子/番外', 'Chapter N', '卷X']) names.add(n);
+  } else {
+    // 2) 没有「第X章」时才按打分挑规则
+    let best = null;
+    for (const rule of RULES) {
+      const hits = collectByRule(lines, rule.name);
+      const score = scoreCandidates(src, hits) + rule.weight;
+      if (score < 0) continue;
+      if (!best || score > best.score) best = { score, hits, rule: rule.name };
+    }
+    if (!best || best.hits.length < 2) return fallbackSections(src);
+
+    for (const n of [best.rule, '序章/楔子/番外', 'Chapter N']) names.add(n);
   }
-
-  if (!best || best.hits.length < 2) return fallbackSections(src);
-
-  // 主规则之外，再并入「低噪声」的通用标题（楔子/番外/Chapter）
-  // 否则一本「楔子 + 第X章」的书会丢掉楔子
-  const ALWAYS = ['序章/楔子/番外', 'Chapter N'];
-  const names = new Set([best.rule, ...ALWAYS]);
 
   const all = [];
   for (const name of names) all.push(...collectByRule(lines, name));
@@ -227,7 +243,7 @@ export function parseChapters(text) {
     deduped.push(h);
   }
 
-  const hits = dropTocRuns(deduped);
+  const hits = dropTocRuns(deduped, src.length);
 
   if (hits.length < 2) return fallbackSections(src);
 
@@ -237,7 +253,7 @@ export function parseChapters(text) {
     end: i + 1 < hits.length ? hits[i + 1].start : src.length,
   }));
 
-  const cleaned = mergeShortChapters(chapters);
+  const cleaned = mergeShortChapters(chapters, src.length * 0.1);
 
   // 开头若还有一段正文（书名、作者、简介），补成「开始」
   if (cleaned.length && cleaned[0].start > 0) {
@@ -256,6 +272,10 @@ export function parseChapters(text) {
 export function detectRule(text) {
   const src = String(text ?? '');
   const lines = splitLines(src);
+
+  const strict = collectByRule(lines, '第X章');
+  if (strict.length >= 3) return { score: strict.length, count: strict.length, rule: '第X章' };
+
   let best = null;
   for (const rule of RULES) {
     const hits = collectByRule(lines, rule.name);
