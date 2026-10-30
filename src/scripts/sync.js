@@ -180,6 +180,22 @@ async function idbPut(desc, value, key) {
   });
 }
 
+async function idbDelete(desc, key) {
+  if (!(await storeReady(desc))) return false;
+  const db = await openExisting(desc.db);
+  if (!db) return false;
+  return new Promise(resolve => {
+    try {
+      const tx = db.transaction(desc.store, 'readwrite');
+      tx.objectStore(desc.store).delete(key);
+      tx.oncomplete = () => resolve(true);
+      tx.onabort = () => resolve(false);
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
 /* ============================== 状态 ============================== */
 
 const app = () => document.getElementById('sync-app');
@@ -234,7 +250,14 @@ async function collectBlobs() {
       sha = await sha256(new TextEncoder().encode(text));
       shaCache[cacheKey] = sha;
     }
-    books.push({ id: meta.id, sha, title: meta.title, size: meta.size || 0 });
+    // 元数据整包带走：书名、章节表、阅读进度
+    books.push({
+      id: meta.id,
+      sha,
+      title: meta.title,
+      size: meta.size || 0,
+      meta: { ...meta },
+    });
   }
 
   localStorage.setItem(shaCacheKey, JSON.stringify(shaCache));
@@ -292,14 +315,18 @@ async function applySnapshot(payload) {
     localStorage.setItem(CONFIG_KEY, JSON.stringify(merged));
   }
 
-  await pullBlobs(payload).catch(() => 0);
-  localStorage.setItem(REV_KEY, String(payload._rev ?? state.serverRev));
+  // 拉取失败就不记版本号，下次同步会重试
+  const pulled = await pullBlobs(payload).catch(() => -1);
+  if (pulled >= 0) {
+    localStorage.setItem(REV_KEY, String(payload._rev ?? state.serverRev));
+  }
 }
 
 /* ============================== 二进制 ============================== */
 
 async function uploadBlobs(blobs) {
   let uploaded = 0;
+  let failed = 0;
 
   for (const img of blobs.images) {
     const head = await fetch(`/api/blob/${img.sha}`, { method: 'HEAD', credentials: 'same-origin' });
@@ -314,6 +341,7 @@ async function uploadBlobs(blobs) {
       body: bytes,
     });
     if (res.ok) uploaded++;
+    else failed++;
   }
 
   for (const book of blobs.books) {
@@ -329,9 +357,10 @@ async function uploadBlobs(blobs) {
       body: bytes,
     });
     if (res.ok) uploaded++;
+    else failed++;
   }
 
-  return uploaded;
+  return { uploaded, failed };
 }
 
 async function pullBlobs(payload) {
@@ -344,16 +373,40 @@ async function pullBlobs(payload) {
     if (!res.ok) continue;
     const bytes = new Uint8Array(await res.arrayBuffer());
     await idbPut(DBS.images, bytesToDataUrl(bytes), img.id);
+    haveImages.add(img.id);
     downloaded++;
   }
 
   const haveBooks = new Set((await idbAll(DBS.books)).map(b => b.id));
+  const haveTexts = new Set(await idbAllKeys(DBS.texts));
+  const cloudBookIds = new Set((payload.books || []).map(b => b.id));
+
   for (const book of payload.books || []) {
-    if (haveBooks.has(book.id)) continue;
-    const res = await fetch(`/api/blob/${book.sha}`, { credentials: 'same-origin' });
-    if (!res.ok) continue;
-    const text = await res.text();
-    await idbPut(DBS.texts, text, book.id);
+    // 1) 先补书架条目（缺了它，正文在库里也看不到）
+    if (!haveBooks.has(book.id) && book.meta) {
+      await idbPut(DBS.books, { ...book.meta, id: book.id });
+      haveBooks.add(book.id);
+      downloaded++;
+    }
+
+    // 2) 再补正文
+    if (!haveTexts.has(book.id)) {
+      const res = await fetch(`/api/blob/${book.sha}`, { credentials: 'same-origin' });
+      if (!res.ok) continue;
+      const text = await res.text();
+      await idbPut(DBS.texts, text, book.id);
+      haveTexts.add(book.id);
+      downloaded++;
+    }
+  }
+
+  // 3) 云端没有的书，说明在别的设备删掉了 —— 本地一并清掉
+  //    （只有「本地无未推送改动」时才会走到这里）
+  for (const id of [...haveBooks]) {
+    if (cloudBookIds.has(id)) continue;
+    await idbDelete(DBS.books, id);
+    await idbDelete(DBS.texts, id);
+    haveBooks.delete(id);
     downloaded++;
   }
 
@@ -424,13 +477,13 @@ async function syncNow({ force = false } = {}) {
     state.rev = out.rev;
     state.serverRev = out.rev;
 
-    const uploaded = await uploadBlobs(blobs).catch(() => 0);
+    const { uploaded, failed } = await uploadBlobs(blobs).catch(() => ({ uploaded: 0, failed: 0 }));
 
-    setState({
-      busy: false,
-      dirty: false,
-      message: uploaded ? `已同步，上传 ${uploaded} 个文件` : '已同步',
-    });
+    let message = '已同步';
+    if (uploaded) message = `已同步，上传 ${uploaded} 个文件`;
+    if (failed) message += `，${failed} 个失败（可能超过 25MB）`;
+
+    setState({ busy: false, dirty: false, message });
   } catch (err) {
     setState({ busy: false, message: err.message || '同步失败' });
   } finally {
