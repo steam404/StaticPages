@@ -69,12 +69,12 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
     <section class="bubbles">
       <div class="bubbles-head">
         <h2>留言气泡</h2>
-        <button class="btn-ghost" type="button" data-bubble="reshuffle">换两条</button>
+        <span class="bubble-note">在页面上随机飘，飘完换下一批</span>
       </div>
 
-      <div class="bubble-list" id="bubble-list">
-        <p class="bubble-empty">还没有人留言。</p>
-      </div>
+      <div class="bubble-layer" id="bubble-layer" aria-hidden="true"></div>
+      <div class="bubble-static" id="bubble-static"></div>
+      <p class="bubble-empty" id="bubble-empty" hidden>还没有人留言，登录后可以留第一句。</p>
 
       <form class="bubble-form" id="bubble-form" hidden>
         <input id="bubble-author" maxlength="16" placeholder="署名（可留空）" autocomplete="off" />
@@ -133,35 +133,98 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
 </script>
 
 <script>
-  const bubbleList = document.getElementById('bubble-list');
+  const layer = document.getElementById('bubble-layer');
+  const staticBox = document.getElementById('bubble-static');
+  const emptyHint = document.getElementById('bubble-empty');
   const bubbleForm = document.getElementById('bubble-form');
   const bubbleLogin = document.getElementById('bubble-login');
   const bubbleHint = document.getElementById('bubble-hint');
   const authorInput = document.getElementById('bubble-author');
   const bodyInput = document.getElementById('bubble-body');
 
-  const esc = s =>
-    String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const MAX_ON_SCREEN = 4;
 
-  async function loadBubbles() {
-    if (!bubbleList) return;
-    try {
-      const res = await fetch('/api/bubbles?limit=2', { cache: 'no-store', credentials: 'same-origin' });
-      const data = await res.json();
-      const items = data.items || [];
-      bubbleList.innerHTML = items.length
-        ? items
-            .map(
-              b => `<div class="bubble">
-                      <p>${esc(b.body)}</p>
-                      ${b.author ? `<span class="bubble-by">— ${esc(b.author)}</span>` : ''}
-                    </div>`,
-            )
-            .join('')
-        : '<p class="bubble-empty">还没有人留言。</p>';
-    } catch {
-      bubbleList.innerHTML = '<p class="bubble-empty">暂时读不到留言。</p>';
+  let pool = [];
+  let cursor = 0;
+
+  function bubbleEl(item) {
+    const el = document.createElement('div');
+    el.className = 'bubble';
+
+    const p = document.createElement('p');
+    p.textContent = item.body;
+    el.appendChild(p);
+
+    if (item.author) {
+      const by = document.createElement('span');
+      by.className = 'bubble-by';
+      by.textContent = '— ' + item.author;
+      el.appendChild(by);
     }
+    return el;
+  }
+
+  function renderStatic() {
+    if (!staticBox) return;
+    if (!pool.length) {
+      staticBox.innerHTML = '<p class="bubble-empty">还没有人留言。</p>';
+      return;
+    }
+    staticBox.replaceChildren(...pool.slice(0, 4).map(bubbleEl));
+  }
+
+  async function fetchPool() {
+    try {
+      const res = await fetch('/api/bubbles?limit=20', { cache: 'no-store', credentials: 'same-origin' });
+      const data = await res.json();
+      pool = (data.items || []).filter(b => b && b.body);
+    } catch {
+      pool = [];
+    }
+
+    if (emptyHint) emptyHint.hidden = pool.length > 0;
+    if (reduceMotion) renderStatic();
+  }
+
+  function randomSpot() {
+    const w = layer.clientWidth || window.innerWidth;
+    const h = layer.clientHeight || window.innerHeight;
+    // 留出气泡自身宽度；下半屏留给留言表单
+    const x = 16 + Math.random() * Math.max(16, w - 260);
+    const y = 60 + Math.random() * Math.max(16, h * 0.62);
+    return { x, y };
+  }
+
+  function tooClose(x, y) {
+    return [...layer.querySelectorAll('.bubble')].some(el => {
+      const dx = Math.abs(parseFloat(el.style.left || '0') - x);
+      const dy = Math.abs(parseFloat(el.style.top || '0') - y);
+      return dx < 190 && dy < 90;
+    });
+  }
+
+  function spawn() {
+    if (!layer || !pool.length) return;
+    if (layer.querySelectorAll('.bubble').length >= MAX_ON_SCREEN) return;
+
+    const item = pool[cursor++ % pool.length];
+    const el = bubbleEl(item);
+
+    let spot = randomSpot();
+    for (let i = 0; i < 6 && tooClose(spot.x, spot.y); i++) spot = randomSpot();
+
+    el.style.left = spot.x + 'px';
+    el.style.top = spot.y + 'px';
+    layer.appendChild(el);
+
+    requestAnimationFrame(() => el.classList.add('show'));
+
+    const life = 5200 + Math.random() * 2600;
+    setTimeout(() => {
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 1100);
+    }, life);
   }
 
   async function checkLogin() {
@@ -198,20 +261,26 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
 
       bodyInput.value = '';
       bubbleHint.textContent = '已发送';
-      await loadBubbles();
+      await fetchPool();
+      if (!reduceMotion) spawn();
       setTimeout(() => (bubbleHint.textContent = ''), 2000);
     } catch (err) {
       bubbleHint.textContent = err.message;
     }
   });
 
-  document.querySelector('[data-bubble="reshuffle"]')?.addEventListener('click', loadBubbles);
   document
     .querySelector('[data-bubble="login"]')
     ?.addEventListener('click', () => document.getElementById('sync-btn')?.click());
 
-  loadBubbles();
-  checkLogin();
+  (async () => {
+    await fetchPool();
+    await checkLogin();
+    if (reduceMotion) return;
+
+    spawn();
+    setInterval(spawn, 3400);
+  })();
 </script>
 
 <style is:global>
@@ -395,6 +464,7 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
   /* ---------- 留言气泡 ---------- */
 
   .play .bubbles {
+    position: relative;
     margin-top: 2.6rem;
     padding-top: 1.4rem;
     border-top: 1px solid var(--border);
@@ -402,10 +472,11 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
 
   .play .bubbles-head {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: space-between;
     gap: 0.6rem;
     margin-bottom: 0.9rem;
+    flex-wrap: wrap;
   }
 
   .play .bubbles-head h2 {
@@ -413,39 +484,82 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
     font-size: 1rem;
   }
 
-  .play .bubble-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
+  .play .bubble-note {
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  /* 随机飘浮层：覆盖整个视口，不挡点击 */
+  .play .bubble-layer {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 3;
   }
 
   .play .bubble {
-    background: var(--surface);
+    position: absolute;
+    max-width: min(15rem, 70vw);
+    padding: 0.6rem 0.85rem;
     border: 1px solid var(--border);
     border-radius: 14px 14px 14px 4px;
-    padding: 0.7rem 0.9rem;
-    max-width: 36rem;
-    box-shadow: var(--shadow-sm);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    font-size: 0.85rem;
+    line-height: 1.65;
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+    transition:
+      opacity 0.9s var(--ease),
+      transform 0.9s var(--ease);
+  }
+
+  .play .bubble.show {
+    opacity: 1;
+    transform: none;
   }
 
   .play .bubble p {
     margin: 0;
-    font-size: 0.9rem;
-    line-height: 1.7;
   }
 
   .play .bubble-by {
     display: block;
-    margin-top: 0.3rem;
-    font-size: 0.74rem;
+    margin-top: 0.25rem;
+    font-size: 0.72rem;
     color: var(--muted);
     text-align: right;
+  }
+
+  /* 减少动效时的静态兜底 */
+  .play .bubble-static {
+    display: none;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .play .bubble-static .bubble {
+    position: static;
+    max-width: 36rem;
+    opacity: 1;
+    transform: none;
   }
 
   .play .bubble-empty {
     margin: 0;
     font-size: 0.85rem;
     color: var(--muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .play .bubble-layer {
+      display: none;
+    }
+
+    .play .bubble-static {
+      display: flex;
+    }
   }
 
   .play .bubble-form {

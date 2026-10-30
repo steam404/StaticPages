@@ -25,7 +25,7 @@ export async function handleBubbles(request, env, url) {
 
   if (url.pathname === '/api/bubbles' && request.method === 'GET') {
     const raw = Number(url.searchParams.get('limit'));
-    const limit = Math.min(Math.max(Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 2, 1), 5);
+    const limit = Math.min(Math.max(Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 2, 1), 20);
 
     const rows = await env.DB.prepare(
       'SELECT id, body, author, created_at FROM bubbles WHERE hidden = 0 ORDER BY RANDOM() LIMIT ?',
