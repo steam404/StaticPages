@@ -49,18 +49,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     display: flex;
     gap: 0.4rem;
     margin-bottom: 1.3rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--border);
     padding-bottom: 0.6rem;
   }
 
   .read-tabs button {
-    border: 1px solid transparent;
+    border: 3px solid transparent;
     background: transparent;
     color: var(--muted);
     font: inherit;
     font-size: 0.94rem;
     padding: 0.35rem 0.9rem;
-    border-radius: 999px;
+    border-radius: 0;
     cursor: pointer;
   }
 
@@ -76,8 +76,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   /* ---------- 通用 ---------- */
 
   .read-empty {
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border: 3px solid var(--border);
+    border-radius: 0;
     padding: 1.6rem 1.2rem;
     text-align: center;
     background: var(--surface);
@@ -121,8 +121,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     padding: 0.8rem 0.9rem;
     cursor: pointer;
     transition: border-color 0.15s;
@@ -135,7 +135,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .read .book-cover {
     width: 2.6rem;
     height: 3.4rem;
-    border-radius: 6px;
+    border-radius: 0;
     background: var(--code-bg);
     display: flex;
     align-items: center;
@@ -162,7 +162,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .read .book-progress {
     height: 4px;
     background: var(--code-bg);
-    border-radius: 999px;
+    border-radius: 0;
     overflow: hidden;
     margin: 0.1rem 0;
   }
@@ -180,7 +180,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     color: var(--muted);
     font-size: 0.9rem;
     padding: 0.25rem 0.4rem;
-    border-radius: 6px;
+    border-radius: 0;
     line-height: 1;
   }
 
@@ -198,8 +198,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .read .reader {
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     overflow: hidden;
   }
 
@@ -208,7 +208,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     align-items: center;
     gap: 0.6rem;
     padding: 0.6rem 0.8rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--border);
     background: var(--code-bg);
   }
 
@@ -250,7 +250,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     align-items: center;
     gap: 0.6rem;
     padding: 0.6rem 0.8rem;
-    border-top: 1px solid var(--border);
+    border-top: 2px solid var(--border);
     background: var(--code-bg);
   }
 
@@ -271,8 +271,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   /* ---------- 目录 ---------- */
 
   #read-modal {
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     padding: 0;
     background: var(--bg);
     color: var(--fg);
@@ -314,8 +314,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     font: inherit;
     font-size: 0.88rem;
     padding: 0.45rem 0.6rem;
-    border: 1px solid transparent;
-    border-radius: 6px;
+    border: 3px solid transparent;
+    border-radius: 0;
     background: transparent;
     color: var(--fg);
     cursor: pointer;
@@ -355,8 +355,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     font: inherit;
     font-size: 0.9rem;
     padding: 0.45rem 0.6rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     background: var(--bg);
     color: var(--fg);
   }
@@ -375,8 +375,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     font: inherit;
     font-size: 0.9rem;
     padding: 0.45rem 0.7rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     background: var(--bg);
     color: var(--fg);
     margin-bottom: 0.7rem;
@@ -396,8 +396,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   .read .rec {
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     padding: 0.65rem 0.8rem;
     transition: border-color 0.15s;
   }
@@ -431,7 +431,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     flex: none;
     width: 3.2rem;
     height: 4.5rem;
-    border-radius: 4px;
+    border-radius: 0;
     object-fit: cover;
     background: var(--surface-2);
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
@@ -473,7 +473,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .read .rec-body {
     margin-top: 0.6rem;
     padding-top: 0.6rem;
-    border-top: 1px dashed var(--border);
+    border-top: 2px dashed var(--border);
     padding-left: 3.95rem;
   }
 
@@ -488,7 +488,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     margin-top: 0.5rem;
     font-size: 0.78rem;
     color: var(--muted);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--border);
   }
 
   .read .rec-link:hover {
@@ -523,7 +523,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     margin-left: auto;
     font-size: 1rem;
     padding: 0.2rem 0.6rem;
-    border-radius: 999px;
+    border-radius: 0;
   }
 
   .read .news-list {
@@ -533,8 +533,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   .read .news-item {
-    border: 1px solid var(--border);
-    border-radius: 10px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     padding: 0.8rem 0.9rem;
   }
 
@@ -553,8 +553,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   .read .news-source {
     font-size: 0.72rem;
     color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 999px;
+    border: 3px solid var(--border);
+    border-radius: 0;
     padding: 0 0.45rem;
     white-space: nowrap;
   }
@@ -570,8 +570,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     display: inline-block;
     margin-right: 0.4rem;
     padding: 0 0.4rem;
-    border: 1px solid var(--accent);
-    border-radius: 4px;
+    border: 3px solid var(--accent);
+    border-radius: 0;
     color: var(--accent);
     font-size: 0.68rem;
     line-height: 1.6;
@@ -628,7 +628,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     color: var(--bg);
     font-size: 0.85rem;
     padding: 0.5rem 1rem;
-    border-radius: 999px;
+    border-radius: 0;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s, transform 0.2s;

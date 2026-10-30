@@ -9,43 +9,43 @@ const hasNext = totalPages > 1;
 
 <BaseLayout title="养乐多的主页" description="养乐多的主页：吃什么、在看什么，还有一些随手写的字。">
   <section class="intro">
-    <h1>你好，我是养乐多</h1>
-    <p>这里记我做的菜、吃过的饭，和一点技术笔记。</p>
+    <h1>欢迎来到养乐多的主页</h1>
+    <p>关于美食、游戏、动漫和生活的个人博客</p>
   </section>
 
   <div class="entries">
-    <a class="entry" href="/eat/">
-      <span class="entry-emoji">🥢</span>
+    <a class="entry" data-color="red" href="/eat/">
+      <span class="entry-sprite"><img src="/sprites/mushroom.png" alt="蘑菇" /></span>
       <span class="entry-text">
-        <strong>养乐多在吃什么</strong>
-        <small>记录每天的菜、热量和营养</small>
+        <strong>吃什么</strong>
+        <small>随机抽取今天吃什么</small>
       </span>
       <span class="entry-arrow">→</span>
     </a>
 
-    <a class="entry" href="/read/">
-      <span class="entry-emoji">📖</span>
+    <a class="entry" data-color="orange" href="/read/">
+      <span class="entry-sprite"><img src="/sprites/qblock.png" alt="问号方块" /></span>
       <span class="entry-text">
-        <strong>养乐多在看什么</strong>
-        <small>全球新闻与书籍</small>
+        <strong>看什么</strong>
+        <small>动漫与影视观后感</small>
       </span>
       <span class="entry-arrow">→</span>
     </a>
 
-    <a class="entry" href="/play/">
-      <span class="entry-emoji">🎮</span>
+    <a class="entry" data-color="yellow" href="/play/">
+      <span class="entry-sprite"><img src="/sprites/star.png" alt="无敌星" /></span>
       <span class="entry-text">
-        <strong>养乐多在玩什么</strong>
-        <small>玩过的游戏，带星级和 Steam 链接</small>
+        <strong>玩什么</strong>
+        <small>游戏体验与测评</small>
       </span>
       <span class="entry-arrow">→</span>
     </a>
 
-    <a class="entry" href="/fortune/">
-      <span class="entry-emoji">🎋</span>
+    <a class="entry" data-color="green" href="/fortune/">
+      <span class="entry-sprite"><img src="/sprites/1up.png" alt="绿蘑菇" /></span>
       <span class="entry-text">
-        <strong>养乐多今天运势如何</strong>
-        <small>摇一支签，看看今天 — 纯属娱乐</small>
+        <strong>今日运势</strong>
+        <small>摇一支签，看看今天</small>
       </span>
       <span class="entry-arrow">→</span>
     </a>
@@ -76,74 +76,5 @@ const hasNext = totalPages > 1;
 </BaseLayout>
 
 <style>
-  .entries {
-    display: grid;
-    gap: 0.7rem;
-    margin: 1.8rem 0 0.5rem;
-  }
-
-  @media (min-width: 560px) {
-    .entries {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  .entry {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    box-shadow: var(--shadow-sm);
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .entry:hover {
-    text-decoration: none;
-  }
-
-  .entry-emoji {
-    flex: none;
-    width: 2.6rem;
-    height: 2.6rem;
-    display: grid;
-    place-items: center;
-    border-radius: 12px;
-    background: var(--accent-soft);
-    font-size: 1.3rem;
-    line-height: 1;
-  }
-
-  .entry-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    min-width: 0;
-  }
-
-  .entry-text strong {
-    font-size: 1rem;
-    line-height: 1.4;
-  }
-
-  .entry-text small {
-    color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
-  }
-
-  .entry-arrow {
-    margin-left: auto;
-    flex: none;
-    color: var(--accent);
-    font-size: 1.05rem;
-    transition: transform 0.16s var(--ease);
-  }
-
-  .entry:hover .entry-arrow {
-    transform: translateX(3px);
-  }
+  /* 首页入口卡片样式已在 global.css 中定义 */
 </style>

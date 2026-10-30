@@ -1,50 +1,72 @@
 /* ==========================================================
-   设计变量
+   马里奥像素风主题
+   Zpix 中文像素字体 + NES 经典配色
    ========================================================== */
 
+@font-face {
+  font-family: 'Zpix';
+  src: url('/fonts/zpix.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* --- 设计变量 --- */
+
 :root {
-  --bg: #fbfaf8;
-  --surface: #ffffff;
-  --surface-2: #f4f2ee;
-  --fg: #1b1a18;
-  --muted: #6d6a63;
-  --border: #e6e2db;
-  --accent: #b4451d;
-  --accent-soft: #f7e9e1;
-  --code-bg: #f4f2ee;
+  /* NES 马里奥经典配色 */
+  --sky-blue: #5c94fc;
+  --mario-red: #e52521;
+  --coin-yellow: #fbd000;
+  --grass-green: #0a8c1c;
+  --qblock-orange: #ea9e22;
+  --brick-brown: #994e00;
+  --ground-brown: #d09030;
+  --deep-brown: #3b2008;
+  --cloud-white: #ffffff;
+
+  /* 语义映射 */
+  --bg: var(--sky-blue);
+  --surface: #fffdf5;
+  --surface-2: rgba(255, 255, 255, 0.22);
+  --fg: #24150a;
+  --muted: rgba(36, 21, 10, 0.85);
+  --heading: #24150a;
+  --heading-2: #8a4b00;
+  --border: var(--deep-brown);
+  --accent: var(--qblock-orange);
+  --accent-soft: rgba(234, 158, 34, 0.2);
+  --code-bg: rgba(0, 0, 0, 0.3);
 
   --max: 44rem;
-  --radius: 14px;
-  --radius-sm: 10px;
+  --radius: 0px;
+  --radius-sm: 0px;
 
-  --shadow-sm: 0 1px 2px rgb(28 24 18 / 0.05);
-  --shadow-md: 0 2px 6px rgb(28 24 18 / 0.05), 0 12px 28px -16px rgb(28 24 18 / 0.22);
-  --ring: 0 0 0 3px rgb(180 69 29 / 0.22);
+  --shadow-sm: 4px 4px 0px var(--deep-brown);
+  --shadow-md: 6px 6px 0px var(--deep-brown);
+  --ring: 0 0 0 3px var(--coin-yellow);
 
-  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease: steps(2);
+
+  --pixel-font: 'Zpix', 'Courier New', 'SimHei', 'Microsoft YaHei', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f0f10;
-    --surface: #17171a;
-    --surface-2: #1e1e22;
+    --sky-blue: #1a1a2e;
+    --bg: #1a1a2e;
+    --surface: #2a2a3e;
+    --surface-2: rgba(255, 255, 255, 0.08);
     --fg: #eae8e3;
-    --muted: #9c988f;
-    --border: #2a2a2f;
-    --accent: #f08a4b;
-    --accent-soft: #2a1a12;
-    --code-bg: #1b1b1f;
-
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
-    --shadow-md: 0 2px 6px rgb(0 0 0 / 0.35), 0 14px 32px -18px rgb(0 0 0 / 0.8);
-    --ring: 0 0 0 3px rgb(240 138 75 / 0.28);
+    --muted: rgba(234, 232, 227, 0.6);
+    --deep-brown: #0d0d1a;
+    --ground-brown: #3a3a4e;
+    --heading: #eae8e3;
+    --heading-2: #ffb347;
+    --shadow-sm: 4px 4px 0px #0d0d1a;
+    --shadow-md: 6px 6px 0px #0d0d1a;
   }
 }
 
-/* ==========================================================
-   基础
-   ========================================================== */
+/* --- 基础 --- */
 
 *,
 *::before,
@@ -60,15 +82,28 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  font-size: 17px;
-  line-height: 1.75;
+  font-family: var(--pixel-font);
+  font-size: 14px;
+  line-height: 1.8;
   text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: none;
+}
+
+/* 像素网格背景纹理 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 15px, rgba(255,255,255,0.02) 15px, rgba(255,255,255,0.02) 16px),
+    repeating-linear-gradient(90deg, transparent, transparent 15px, rgba(255,255,255,0.02) 15px, rgba(255,255,255,0.02) 16px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 a {
-  color: var(--accent);
+  color: var(--coin-yellow);
   text-decoration: none;
 }
 
@@ -79,18 +114,15 @@ a:hover {
 
 :is(a, button, summary, [tabindex]):focus-visible {
   outline: none;
-  border-radius: 8px;
   box-shadow: var(--ring);
 }
 
 ::selection {
-  background: var(--accent-soft);
-  color: var(--fg);
+  background: var(--mario-red);
+  color: #ffffff;
 }
 
-/* ==========================================================
-   框架
-   ========================================================== */
+/* --- 框架 --- */
 
 .site-header,
 main,
@@ -99,73 +131,146 @@ main,
   margin: 0 auto;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
+  position: relative;
+  z-index: 1;
 }
 
 .site-header {
-  padding-top: 2rem;
-  padding-bottom: 1rem;
+  padding-top: 1.5rem;
+  padding-bottom: 0.5rem;
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.75rem 1.5rem;
+  gap: 0.5rem 1rem;
 }
 
 .brand {
   color: var(--fg);
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-weight: bold;
+  font-size: 18px;
+  letter-spacing: 2px;
+  padding: 6px 14px;
+  background: var(--qblock-orange);
+  border: 4px solid var(--deep-brown);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .brand:hover {
   text-decoration: none;
-  color: var(--accent);
+  color: var(--deep-brown);
+  filter: brightness(1.1);
+}
+
+.brand::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 28px;
+  background: url('/sprites/coin.png') no-repeat center / contain;
+  image-rendering: pixelated;
 }
 
 .site-header nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 1rem;
-  font-size: 0.92rem;
+  gap: 2px;
+  font-size: 12px;
 }
 
 .site-header nav a {
-  color: var(--muted);
-  padding: 0.1rem 0;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s var(--ease), border-color 0.15s var(--ease);
+  color: var(--fg);
+  padding: 4px 12px;
+  border: 2px solid transparent;
+  background: var(--surface-2);
+  transition: all 0.15s var(--ease);
 }
 
 .site-header nav a:hover {
-  color: var(--fg);
   text-decoration: none;
+  background: rgba(255, 255, 255, 0.25);
+  border-color: var(--deep-brown);
 }
 
 .site-header nav a[aria-current='page'] {
-  color: var(--fg);
-  border-bottom-color: var(--accent);
+  color: var(--deep-brown);
+  background: var(--qblock-orange);
+  border-color: var(--deep-brown);
 }
 
 main {
-  padding-top: 1rem;
-  padding-bottom: 4rem;
+  padding-top: 0.5rem;
+  padding-bottom: 5rem;
 }
 
 .site-footer {
-  padding-top: 1.5rem;
-  padding-bottom: 3rem;
-  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  padding-bottom: 4rem;
+  border-top: 4px solid var(--qblock-orange);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 11px;
+  text-align: center;
 }
 
 .site-footer p {
   margin: 0;
 }
 
-/* ==========================================================
-   通用组件
-   ========================================================== */
+/* --- 像素地面 + 跑步马里奥 --- */
+
+.pixel-ground {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: var(--ground-brown);
+  border-top: 4px solid var(--deep-brown);
+  z-index: 50;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+.pixel-ground::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--deep-brown) 0,
+    var(--deep-brown) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  opacity: 0.4;
+}
+
+.mario-run {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  width: 24px;
+  height: 44px;
+  image-rendering: pixelated;
+  animation: mario-run-anim 12s linear infinite;
+}
+
+@keyframes mario-run-anim {
+  0%   { transform: translateX(-30px); }
+  100% { transform: translateX(calc(100vw + 30px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mario-run { animation: none; }
+}
+
+/* --- 通用组件 --- */
 
 .btn,
 .btn-primary,
@@ -176,52 +281,57 @@ main {
   justify-content: center;
   gap: 0.4rem;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 12px;
   line-height: 1.4;
-  padding: 0.45rem 0.95rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  padding: 6px 16px;
+  border-radius: 0;
+  border: 3px solid var(--deep-brown);
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
-  transition:
-    transform 0.12s var(--ease),
-    background-color 0.15s var(--ease),
-    border-color 0.15s var(--ease),
-    box-shadow 0.15s var(--ease);
+  box-shadow: 3px 3px 0 var(--deep-brown);
+  transition: transform 0.08s var(--ease);
 }
 
 .btn:hover,
 .btn-ghost:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--deep-brown);
+  background: var(--surface-2);
 }
 
 .btn-primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--mario-red);
+  border-color: var(--deep-brown);
   color: #fff;
-  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
-  filter: brightness(1.06);
+  background: #ff3333;
+  filter: brightness(1.1);
 }
 
 .btn-danger {
-  border-color: color-mix(in srgb, #d9534f 55%, var(--border));
-  color: #d9534f;
+  border-color: var(--deep-brown);
+  color: var(--mario-red);
   background: transparent;
 }
 
 .btn-danger:hover {
-  background: color-mix(in srgb, #d9534f 10%, transparent);
+  background: rgba(229, 37, 33, 0.15);
+}
+
+.btn:active,
+.btn-primary:active,
+.btn-ghost:active,
+.btn-danger:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--deep-brown);
 }
 
 .btn:disabled,
 .btn-primary:disabled,
 .btn-ghost:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
   transform: none;
 }
@@ -231,59 +341,53 @@ main {
   align-items: center;
   gap: 0.3rem;
   font: inherit;
-  font-size: 0.8rem;
+  font-size: 11px;
   line-height: 1.6;
-  padding: 0.22rem 0.75rem;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  padding: 3px 10px;
+  border-radius: 0;
+  border: 2px solid var(--deep-brown);
   background: transparent;
-  color: var(--muted);
+  color: var(--fg);
   cursor: pointer;
-  transition:
-    transform 0.12s var(--ease),
-    background-color 0.15s var(--ease),
-    border-color 0.15s var(--ease),
-    color 0.15s var(--ease);
+  transition: all 0.15s var(--ease);
 }
 
 .chip:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--surface-2);
 }
 
 .chip.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--qblock-orange);
+  color: var(--deep-brown);
 }
 
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 4px;
   margin-bottom: 0.9rem;
 }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.1rem 1.15rem;
+  border: 4px solid var(--deep-brown);
+  border-radius: 0;
+  padding: 1rem;
   box-shadow: var(--shadow-sm);
 }
 
 .tag {
   display: inline-block;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0 0.5rem;
-  font-size: 0.72rem;
+  border: 2px solid var(--deep-brown);
+  border-radius: 0;
+  padding: 1px 8px;
+  font-size: 10px;
   line-height: 1.7;
-  color: var(--muted);
+  color: var(--fg);
   white-space: nowrap;
 }
 
-/* 可点击卡片：悬停抬起、按下回弹 */
+/* 可点击卡片：像素按压效果 */
 .pressable,
 .entry,
 .book,
@@ -292,15 +396,11 @@ main {
 .rec,
 .classic,
 [data-action] {
-  transition:
-    transform 0.14s var(--ease),
-    border-color 0.15s var(--ease),
-    box-shadow 0.15s var(--ease),
-    background-color 0.15s var(--ease);
+  transition: transform 0.08s var(--ease), box-shadow 0.08s var(--ease);
 }
 
 :is(.entry, .book, .game, .recipe-open, .rec, .chip, .btn, .btn-primary, .btn-ghost, .btn-danger, [data-action]):active {
-  transform: scale(0.975);
+  transform: translate(3px, 3px);
 }
 
 .pressable:hover,
@@ -308,36 +408,136 @@ main {
 .book:hover,
 .game:hover,
 .recipe-open:hover {
-  border-color: var(--accent);
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }
 
-/* ==========================================================
-   首页
-   ========================================================== */
+/* --- 首页 --- */
+
+.intro {
+  background: var(--surface-2);
+  border: 4px solid var(--deep-brown);
+  padding: 16px 20px;
+  margin-bottom: 1.5rem;
+}
 
 .intro h1 {
-  margin: 0 0 0.5rem;
-  font-size: 2rem;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
+  margin: 0 0 0.3rem;
+  font-size: 20px;
+  line-height: 1.4;
+  letter-spacing: 1px;
+  color: var(--fg);
 }
 
 .intro p {
   margin: 0;
   color: var(--muted);
+  font-size: 12px;
 }
 
+/* --- 入口卡片（马里奥精灵图） --- */
+
+.entries {
+  display: grid;
+  gap: 12px;
+  margin: 1.5rem 0;
+}
+
+@media (min-width: 560px) {
+  .entries {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 4px solid var(--deep-brown);
+  background: var(--sky-blue);
+  box-shadow: var(--shadow-sm);
+  color: inherit;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.entry::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 6px;
+}
+
+.entry[data-color="red"]::before    { background: var(--mario-red); }
+.entry[data-color="orange"]::before { background: var(--qblock-orange); }
+.entry[data-color="yellow"]::before { background: var(--coin-yellow); }
+.entry[data-color="green"]::before  { background: var(--grass-green); }
+
+.entry:hover {
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+}
+
+.entry-sprite {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  display: grid;
+  place-items: center;
+}
+
+.entry-sprite img {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+}
+
+.entry-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.entry-text strong {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--fg);
+}
+
+.entry-text small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.entry-arrow {
+  margin-left: auto;
+  flex: none;
+  color: var(--deep-brown);
+  font-size: 1.05rem;
+  transition: transform 0.16s var(--ease);
+}
+
+.entry:hover .entry-arrow {
+  transform: translateX(4px);
+}
+
+/* --- 文章列表 --- */
+
 .post-list {
-  margin: 2.25rem 0 0;
+  margin: 1.5rem 0 0;
   padding: 0;
   list-style: none;
 }
 
 .post-list li {
-  padding: 1.35rem 0;
-  border-top: 1px solid var(--border);
+  padding: 12px 16px;
+  border: 3px solid var(--deep-brown);
+  background: var(--surface-2);
+  margin-bottom: 6px;
 }
 
 .post-list a {
@@ -349,12 +549,13 @@ main {
 }
 
 .post-list a:hover h2 {
-  color: var(--accent);
+  color: var(--deep-brown);
+  text-decoration: underline;
 }
 
 .post-list h2 {
-  margin: 0 0 0.35rem;
-  font-size: 1.14rem;
+  margin: 0 0 0.25rem;
+  font-size: 14px;
   line-height: 1.45;
   transition: color 0.15s var(--ease);
 }
@@ -362,7 +563,7 @@ main {
 .post-list p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.94rem;
+  font-size: 11px;
 }
 
 .meta {
@@ -370,63 +571,64 @@ main {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.6rem;
+  margin-top: 0.4rem;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 
-/* ==========================================================
-   文章页
-   ========================================================== */
+/* --- 文章页 --- */
 
 .post header h1 {
-  margin: 0.35rem 0 0.75rem;
-  font-size: 1.7rem;
+  margin: 0.3rem 0 0.5rem;
+  font-size: 22px;
   line-height: 1.35;
-  letter-spacing: -0.01em;
+  letter-spacing: 1px;
 }
 
 .prose {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
 .prose h2 {
-  margin: 2.4rem 0 0.8rem;
-  font-size: 1.3rem;
+  margin: 2rem 0 0.6rem;
+  font-size: 18px;
   line-height: 1.4;
+  color: var(--heading);
 }
 
 .prose h3 {
-  margin: 1.9rem 0 0.6rem;
-  font-size: 1.1rem;
+  margin: 1.5rem 0 0.5rem;
+  font-size: 15px;
+  color: var(--heading-2);
 }
 
 .prose p {
-  margin: 1rem 0;
+  margin: 0.8rem 0;
 }
 
 .prose img {
   max-width: 100%;
   height: auto;
-  border-radius: 8px;
+  border: 3px solid var(--deep-brown);
 }
 
 .prose blockquote {
-  margin: 1.4rem 0;
-  padding: 0.2rem 0 0.2rem 1rem;
-  border-left: 3px solid var(--border);
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  border-left: 4px solid var(--qblock-orange);
+  background: var(--surface-2);
   color: var(--muted);
 }
 
 .prose blockquote p {
-  margin: 0.5rem 0;
+  margin: 0.3rem 0;
 }
 
 .prose hr {
-  margin: 2.5rem 0;
+  margin: 2rem 0;
   border: none;
-  border-top: 1px solid var(--border);
+  border-top: 3px solid var(--deep-brown);
 }
 
 .prose ul,
@@ -435,45 +637,46 @@ main {
 }
 
 .prose li {
-  margin: 0.35rem 0;
+  margin: 0.3rem 0;
 }
 
 .prose :not(pre) > code {
   background: var(--code-bg);
-  border-radius: 4px;
-  padding: 0.15em 0.4em;
-  font-size: 0.88em;
+  padding: 0.1em 0.4em;
+  font-size: 0.9em;
+  border: 1px solid var(--deep-brown);
 }
 
 .prose pre {
-  margin: 1.4rem 0;
-  padding: 1rem 1.1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  border: 3px solid var(--deep-brown);
   overflow-x: auto;
-  font-size: 0.85rem;
+  font-size: 12px;
   line-height: 1.6;
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .prose table {
   display: block;
   width: 100%;
-  margin: 1.4rem 0;
+  margin: 1rem 0;
   border-collapse: collapse;
   overflow-x: auto;
-  font-size: 0.92rem;
+  font-size: 12px;
 }
 
 .prose th,
 .prose td {
-  border: 1px solid var(--border);
-  padding: 0.45rem 0.65rem;
+  border: 2px solid var(--deep-brown);
+  padding: 0.35rem 0.55rem;
   text-align: left;
 }
 
 .prose th {
-  background: var(--code-bg);
-  font-weight: 600;
+  background: var(--qblock-orange);
+  font-weight: bold;
+  color: var(--deep-brown);
 }
 
 /* Shiki 明暗双主题 */
@@ -496,8 +699,8 @@ main {
 }
 
 .back {
-  margin-top: 3rem;
-  font-size: 0.9rem;
+  margin-top: 2rem;
+  font-size: 12px;
 }
 
 /* 分页条 */
@@ -506,44 +709,40 @@ main {
   align-items: center;
   justify-content: center;
   gap: 0.9rem;
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   flex-wrap: wrap;
 }
 
 .pager-info {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
-/* ==========================================================
-   同步
-   ========================================================== */
+/* --- 同步 --- */
 
 .sync-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   font: inherit;
-  font-size: 0.78rem;
-  color: var(--muted);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.15rem 0.6rem;
+  font-size: 11px;
+  color: var(--fg);
+  background: var(--surface-2);
+  border: 2px solid var(--deep-brown);
+  padding: 3px 10px;
   cursor: pointer;
-  transition: border-color 0.15s var(--ease), color 0.15s var(--ease);
+  transition: background 0.15s var(--ease);
 }
 
 .sync-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .sync-btn .dot {
   width: 0.5rem;
   height: 0.5rem;
-  border-radius: 50%;
+  border-radius: 0;
   background: var(--muted);
 }
 
@@ -552,51 +751,51 @@ main {
 }
 
 .sync-btn[data-state='dirty'] .dot {
-  background: #c9a227;
+  background: var(--coin-yellow);
 }
 
 .sync-btn[data-state='busy'] .dot {
-  background: var(--accent);
-  animation: sync-pulse 1s infinite;
+  background: var(--mario-red);
+  animation: sync-pulse 0.6s infinite;
 }
 
 .sync-btn[data-state='out'] .dot {
-  background: var(--border);
+  background: var(--muted);
 }
 
 @keyframes sync-pulse {
-  50% {
-    opacity: 0.3;
-  }
+  50% { opacity: 0.3; }
 }
 
 dialog#sync-dialog,
 dialog#sync-conflict {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
+  border: 4px solid var(--deep-brown);
+  border-radius: 0;
+  background: var(--sky-blue);
   color: var(--fg);
   width: min(26rem, calc(100vw - 2rem));
   padding: 0;
+  box-shadow: var(--shadow-md);
 }
 
 dialog#sync-dialog::backdrop,
 dialog#sync-conflict::backdrop {
-  background: rgb(0 0 0 / 0.45);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 #sync-dialog .modal-inner,
 #sync-conflict .modal-inner {
-  padding: 1.1rem 1.2rem;
+  padding: 1rem 1.2rem;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.6rem;
 }
 
 #sync-dialog h2,
 #sync-conflict h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 16px;
+  color: var(--deep-brown);
 }
 
 .sync-head {
@@ -607,26 +806,23 @@ dialog#sync-conflict::backdrop {
 }
 
 .sync-close {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.95rem;
+  border: 2px solid var(--deep-brown);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-size: 0.9rem;
   line-height: 1;
-  padding: 0.2rem 0.35rem;
-  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
   cursor: pointer;
-  transition: color 0.15s var(--ease), background-color 0.15s var(--ease);
 }
 
 .sync-close:hover {
-  color: var(--fg);
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .sync-hint,
 .sync-msg {
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 11px;
   color: var(--muted);
   line-height: 1.6;
 }
@@ -638,18 +834,17 @@ dialog#sync-conflict::backdrop {
 #sync-dialog label {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.84rem;
+  gap: 0.2rem;
+  font-size: 11px;
   color: var(--muted);
 }
 
 #sync-dialog input {
   font: inherit;
-  font-size: 0.9rem;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 2px solid var(--deep-brown);
+  background: var(--surface);
   color: var(--fg);
 }
 
@@ -660,9 +855,7 @@ dialog#sync-conflict::backdrop {
   flex-wrap: wrap;
 }
 
-/* ==========================================================
-   动效降级
-   ========================================================== */
+/* --- 动效降级 --- */
 
 @media (prefers-reduced-motion: reduce) {
   *,
