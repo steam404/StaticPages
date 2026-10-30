@@ -1,8 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SEED_COUNT } from '../data/seed-recipes.js';
-import { REC_COUNT } from '../data/recommends.js';
-import { GAME_COUNT } from '../data/games.js';
 ---
 
 <BaseLayout title="关于" description="关于养乐多：医疗超声从业者，养了三只猫一只狗，做饭、打游戏、偶尔写点东西。">
@@ -19,17 +16,16 @@ import { GAME_COUNT } from '../data/games.js';
       <ul>
         <li>
           <a href="/eat/"><strong>吃什么</strong></a
-          >：记录每天吃了什么、热量和营养，内置 {SEED_COUNT} 道菜谱，支持照片识别快速上传菜谱，还能让 AI 帮你估热量。
+          >：记录每天吃了什么、热量和营养，内置菜谱，支持照片识别快速上传菜谱，还能让 AI 帮你估热量。
         </li>
         <li>
           <a href="/read/"><strong>看什么</strong></a
           >：从 BBC、纽约时报中文网、卫报等抓几条要闻——<em>声明：是 AI 抓的，我没看过！</em>；
-          另有我推荐过的 {REC_COUNT} 本书，和一个能解析章节的 TXT 阅读器；
-          后续可能会加电影推荐、友链之类的。
+          另有推荐几本我读过的书，和一个能解析章节的 TXT 阅读器；后续可能会加电影推荐、并附友链之类的。
         </li>
         <li>
           <a href="/play/"><strong>玩什么</strong></a
-          >：玩过并且愿意推荐的 {GAME_COUNT} 款游戏，后面可能会更新更多功能。
+          >：玩过并且愿意推荐的几款游戏，后面可能会更新更多功能。
         </li>
         <li>
           <a href="/fortune/"><strong>运势</strong></a

@@ -245,8 +245,9 @@ async function collectBlobs() {
     const cacheKey = `book:${meta.id}`;
     let sha = shaCache[cacheKey];
     if (!sha) {
-      const text = await idbGet(DBS.texts, meta.id);
-      if (!text) continue;
+      const raw = await idbGet(DBS.texts, meta.id);
+      if (!raw) continue;
+      const text = typeof raw === 'string' ? raw : await raw.text();
       sha = await sha256(new TextEncoder().encode(text));
       shaCache[cacheKey] = sha;
     }
@@ -347,9 +348,11 @@ async function uploadBlobs(blobs) {
   for (const book of blobs.books) {
     const head = await fetch(`/api/blob/${book.sha}`, { method: 'HEAD', credentials: 'same-origin' });
     if (head.ok) continue;
-    const text = await idbGet(DBS.texts, book.id);
-    if (!text) continue;
-    const bytes = new TextEncoder().encode(text);
+    const raw = await idbGet(DBS.texts, book.id);
+    if (!raw) continue;
+    const bytes = raw instanceof Blob
+      ? new Uint8Array(await raw.arrayBuffer())
+      : new TextEncoder().encode(raw);
     const res = await fetch(`/api/blob/${book.sha}`, {
       method: 'PUT',
       credentials: 'same-origin',
@@ -382,8 +385,8 @@ async function pullBlobs(payload) {
   const cloudBookIds = new Set((payload.books || []).map(b => b.id));
 
   for (const book of payload.books || []) {
-    // 1) 先补书架条目（缺了它，正文在库里也看不到）
-    if (!haveBooks.has(book.id) && book.meta) {
+    // 1) 书架条目：云端为准（阅读进度也在 meta 里，这样换设备能接上）
+    if (book.meta) {
       await idbPut(DBS.books, { ...book.meta, id: book.id });
       haveBooks.add(book.id);
       downloaded++;
@@ -394,7 +397,7 @@ async function pullBlobs(payload) {
       const res = await fetch(`/api/blob/${book.sha}`, { credentials: 'same-origin' });
       if (!res.ok) continue;
       const text = await res.text();
-      await idbPut(DBS.texts, text, book.id);
+      await idbPut(DBS.texts, new Blob([text], { type: 'text/plain;charset=utf-8' }), book.id);
       haveTexts.add(book.id);
       downloaded++;
     }

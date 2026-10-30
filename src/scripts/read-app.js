@@ -96,6 +96,34 @@ async function dbDel(store, key) {
   s.delete(key);
 }
 
+/* 书籍正文按 Blob 存，打开时只切当前章，不用整本读进内存 */
+
+const textEncoder = new TextEncoder();
+
+/** 给章节补上 UTF-8 字节偏移（Blob.slice 用的是字节） */
+function withByteOffsets(chapters, text) {
+  let byte = 0;
+  return chapters.map(c => {
+    const len = textEncoder.encode(text.slice(c.start, c.end)).length;
+    const out = { ...c, byteStart: byte, byteEnd: byte + len };
+    byte += len;
+    return out;
+  });
+}
+
+/** 取正文 Blob；老数据是纯字符串时顺手升级成 Blob */
+async function ensureBlobText(id) {
+  const value = await dbGet('texts', id);
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    const blob = new Blob([value], { type: 'text/plain;charset=utf-8' });
+    await dbPut('texts', blob, id);
+    return { blob, legacyText: value };
+  }
+  return { blob: value, legacyText: null };
+}
+
 /* ============================== 状态 ============================== */
 
 const LS = {
@@ -293,9 +321,9 @@ async function updateBookList() {
 /* ============================== 渲染：阅读器 ============================== */
 
 function renderReader() {
-  const { meta, text, index } = reader;
+  const { meta, index } = reader;
   const ch = meta.chapters[index];
-  const body = text.slice(ch.start, ch.end).trim();
+  const body = (reader.chapterText || '').trim();
   const last = index >= meta.chapters.length - 1;
 
   return `
@@ -633,11 +661,11 @@ function pickTxt() {
     toast('正在解析…');
     try {
       const { text, encoding } = await readTextFile(file);
-      const chapters = parseChapters(text);
+      const chapters = withByteOffsets(parseChapters(text), text);
       const id = uid();
       const title = file.name.replace(/\.txt$/i, '');
 
-      await dbPut('texts', text, id);
+      await dbPut('texts', new Blob([text], { type: 'text/plain;charset=utf-8' }), id);
       await dbPut('books', {
         id,
         title,
@@ -661,19 +689,43 @@ function pickTxt() {
 
 async function openBook(id) {
   const meta = await dbGet('books', id);
-  const text = await dbGet('texts', id);
-  if (!meta || !text) return toast('这本书的数据丢了，重新上传一次吧');
+  if (!meta) return toast('这本书的数据丢了，重新上传一次吧');
 
-  const chapter = Math.min(meta.progress?.chapter ?? 0, Math.max(0, meta.chapters.length - 1));
+  const got = await ensureBlobText(id);
+  if (!got) return toast('这本书的数据丢了，重新上传一次吧');
+
+  // 老数据没有字节偏移：补一次并存回去（只发生这一次）
+  if (!meta.chapters?.[0]?.byteStart) {
+    const full = got.legacyText ?? (await got.blob.text());
+    meta.chapters = withByteOffsets(meta.chapters, full);
+    await dbPut('books', meta);
+  }
+
+  const chapter = Math.min(Math.max(0, meta.progress?.chapter ?? 0), meta.chapters.length - 1);
   reader = {
     meta,
-    text,
+    blob: got.blob,
     index: chapter,
     page: meta.progress?.page ?? 0,
     pages: 1,
     pendingEdge: null,
+    chapterText: '',
   };
+
+  await loadChapter(chapter);
   await render();
+}
+
+/** 只解码当前这一章，不碰整本书 */
+async function loadChapter(index) {
+  const ch = reader?.meta?.chapters?.[index];
+  if (!ch) {
+    if (reader) reader.chapterText = '';
+    return;
+  }
+  const start = ch.byteStart ?? 0;
+  const end = ch.byteEnd ?? reader.blob.size;
+  reader.chapterText = await reader.blob.slice(start, end).text();
 }
 
 async function saveProgress() {
@@ -695,6 +747,7 @@ async function goChapter(delta, edge = 'first') {
   reader.index = next;
   reader.page = 0;
   reader.pendingEdge = edge === 'last' ? 'last' : null;
+  await loadChapter(next);
   await render();
   layoutReader();
   await saveProgress();
@@ -791,6 +844,7 @@ document.addEventListener('click', async e => {
       reader.page = 0;
       reader.pendingEdge = null;
       closeModal();
+      await loadChapter(idx);
       await render();
       layoutReader();
       await saveProgress();
@@ -832,16 +886,20 @@ document.addEventListener('click', async e => {
     case 'reparse': {
       if (!reader) break;
       const before = reader.meta.chapters.length;
-      reader.meta.chapters = parseChapters(reader.text);
-      reader.index = Math.min(reader.index, reader.meta.chapters.length - 1);
+      const full = await reader.blob.text(); // 只有这一步会读整本，用户主动触发
+      const chapters = withByteOffsets(parseChapters(full), full);
+
+      reader.meta.chapters = chapters;
+      reader.index = Math.min(reader.index, chapters.length - 1);
       reader.page = 0;
       reader.pendingEdge = null;
       closeModal();
       await dbPut('books', reader.meta);
       window.markSyncDirty?.();
+      await loadChapter(reader.index);
       await render();
       layoutReader();
-      toast(`重新识别：${before} → ${reader.meta.chapters.length} 章`);
+      toast(`重新识别：${before} → ${chapters.length} 章`);
       break;
     }
     case 'modal-close':
