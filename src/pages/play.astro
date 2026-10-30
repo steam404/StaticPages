@@ -63,8 +63,49 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
         ))
       }
     </ul>
+
+    <nav class="game-pager" aria-label="分页"></nav>
   </div>
 </BaseLayout>
+
+<script>
+  const PER_PAGE = 5;
+  const list = document.querySelector('.game-list');
+  const pager = document.querySelector('.game-pager');
+
+  if (list && pager) {
+    const items = Array.from(list.children);
+    const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+    let page = 1;
+
+    const paint = () => {
+      items.forEach((el, i) => {
+        el.style.display = Math.floor(i / PER_PAGE) + 1 === page ? '' : 'none';
+      });
+
+      if (pages <= 1) {
+        pager.innerHTML = '';
+        return;
+      }
+
+      pager.innerHTML = `
+        <button class="btn-ghost" data-page="${page - 1}" ${page === 1 ? 'disabled' : ''}>← 上一页</button>
+        <span class="pager-info">${page} / ${pages}</span>
+        <button class="btn-ghost" data-page="${page + 1}" ${page === pages ? 'disabled' : ''}>下一页 →</button>
+      `;
+    };
+
+    pager.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-page]');
+      if (!btn) return;
+      page = Number(btn.dataset.page);
+      paint();
+      list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    paint();
+  }
+</script>
 
 <style is:global>
   .play {
@@ -91,6 +132,15 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
+  }
+
+  .game-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.9rem;
+    margin-top: 1.3rem;
+    flex-wrap: wrap;
   }
 
   .game {

@@ -55,9 +55,30 @@ const RAW = [
 
   ['死亡搁浅', 'Death Stranding', '冒险', 3.5, 1190460,
    '送快递听起来无聊，但走路的物理和地形设计让它变得有张力——你会真的在意那箱货有没有摔。剧情两极分化，我这边算喜欢。'],
+
+  ['星际拓荒', 'Outer Wilds', '探索解谜', 5, 753640,
+   '把一个 22 分钟的太阳系循环，做成了一整部太空考古史。没有战斗、没有任务清单，全靠好奇心推着走。知道得越多越不敢剧透，所以只能自己玩。'],
+
+  ['速速上菜', 'PlateUp!', '合作经营', 5, 1599600,
+   '和朋友一起开餐厅：肉鸽式的地图布局，加上手忙脚乱的配合。笑点密度极高，也真的会因为分工吵架。得有人一起玩，单机少一半乐趣。'],
+
+  ['怪物猎人世界', 'Monster Hunter: World', '共斗动作', 4.5, 582010,
+   '系列在 PC 上的第一次全面进化：无缝地图、导虫追踪，14 种武器各有一套脾气。真正的乐趣在于和朋友打配合，单人能玩但少点意思。'],
+
+  ['怪物猎人冰原', 'MHW: Iceborne', '资料片', 4.5, 1118010,
+   '世界的资料片，加了一张雪原和飞翔爪、居合这些新动作，整体难度上一个台阶。买了本体再考虑它，不然会打得很痛苦。', 582010],
+
+  ['怪物猎人崛起', 'Monster Hunter Rise', '共斗动作', 4.5, 1446780,
+   '节奏比世界快得多，翔虫让战斗几乎不落地，地图也小一圈。适合碎片时间刷两把，联机匹配很快。'],
+
+  ['怪物猎人曙光', 'MH Rise: Sunbreak', '资料片', 4.5, 1880360,
+   '崛起的资料片，把翔虫玩出花来：切换、盟友任务、终局刷子内容更厚。代价是装备和技能表看得人头大。', 1446780],
+
+  ['怪物猎人荒野', 'Monster Hunter Wilds', '共斗动作', 3, 2246340,
+   '画面和生态又升了一级，沙尘暴、季节变化很带感。但目前的优化和内容量还撑不起价格，等两轮更新再看。'],
 ];
 
-export const GAMES = RAW.map(([title, titleEn, genre, rating, appId, reason], i) => ({
+export const GAMES = RAW.map(([title, titleEn, genre, rating, appId, reason, coverAppId], i) => ({
   id: `game-${i}`,
   title,
   titleEn,
@@ -66,7 +87,8 @@ export const GAMES = RAW.map(([title, titleEn, genre, rating, appId, reason], i)
   appId,
   reason,
   steam: `https://store.steampowered.com/app/${appId}/`,
-  cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`,
+  // 资料片往往没有独立竖版海报，用本体封面
+  cover: `https://cdn.cloudflare.steamstatic.com/steam/apps/${coverAppId || appId}/library_600x900.jpg`,
 }));
 
 export const GAME_COUNT = GAMES.length;
