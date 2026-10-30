@@ -69,7 +69,6 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
     <section class="bubbles">
       <div class="bubbles-head">
         <h2>留言气泡</h2>
-        <span class="bubble-note">在页面上随机飘，飘完换下一批</span>
       </div>
 
       <div class="bubble-layer" id="bubble-layer" aria-hidden="true"></div>
@@ -77,7 +76,6 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
       <p class="bubble-empty" id="bubble-empty" hidden>还没有人留言，登录后可以留第一句。</p>
 
       <form class="bubble-form" id="bubble-form" hidden>
-        <input id="bubble-author" maxlength="16" placeholder="署名（可留空）" autocomplete="off" />
         <textarea id="bubble-body" maxlength="120" rows="2" placeholder="留一句…"></textarea>
         <div class="bubble-actions">
           <span class="bubble-hint" id="bubble-hint"></span>
@@ -139,7 +137,6 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
   const bubbleForm = document.getElementById('bubble-form');
   const bubbleLogin = document.getElementById('bubble-login');
   const bubbleHint = document.getElementById('bubble-hint');
-  const authorInput = document.getElementById('bubble-author');
   const bodyInput = document.getElementById('bubble-body');
 
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -190,9 +187,18 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
   function randomSpot() {
     const w = layer.clientWidth || window.innerWidth;
     const h = layer.clientHeight || window.innerHeight;
-    // 留出气泡自身宽度；下半屏留给留言表单
+
+    // 留出气泡自身宽度
     const x = 16 + Math.random() * Math.max(16, w - 260);
-    const y = 60 + Math.random() * Math.max(16, h * 0.62);
+
+    // 不让气泡压住下面的留言框
+    let maxY = h * 0.6;
+    if (bubbleForm && !bubbleForm.hidden) {
+      const rect = bubbleForm.getBoundingClientRect();
+      if (rect.top > 80) maxY = Math.min(maxY, rect.top - 110);
+    }
+
+    const y = 70 + Math.random() * Math.max(40, maxY - 70);
     return { x, y };
   }
 
@@ -254,7 +260,7 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ body, author: authorInput.value.trim() }),
+        body: JSON.stringify({ body }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || '发送失败');
@@ -484,11 +490,6 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
     font-size: 1rem;
   }
 
-  .play .bubble-note {
-    font-size: 0.76rem;
-    color: var(--muted);
-  }
-
   /* 随机飘浮层：覆盖整个视口，不挡点击 */
   .play .bubble-layer {
     position: fixed;
@@ -569,7 +570,6 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
     margin-top: 1rem;
   }
 
-  .play .bubble-form input,
   .play .bubble-form textarea {
     font: inherit;
     font-size: 0.9rem;
