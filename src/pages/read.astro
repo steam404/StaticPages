@@ -412,8 +412,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   .read .rec summary {
     display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.75rem;
     cursor: pointer;
     list-style: none;
   }
@@ -424,6 +425,33 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   .read .rec summary::marker {
     content: '';
+  }
+
+  .read .rec-cover {
+    flex: none;
+    width: 3.2rem;
+    height: 4.5rem;
+    border-radius: 4px;
+    object-fit: cover;
+    background: var(--surface-2);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+  }
+
+  .read .rec-cover-ph {
+    display: grid;
+    place-items: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(150deg, #8a5a3b, #5d3a24);
+  }
+
+  .read .rec-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+    padding-top: 0.15rem;
   }
 
   .read .rec-head {
@@ -442,12 +470,51 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     color: var(--muted);
   }
 
-  .read .rec-reason {
-    margin: 0.6rem 0 0.1rem;
+  .read .rec-body {
+    margin-top: 0.6rem;
     padding-top: 0.6rem;
     border-top: 1px dashed var(--border);
+    padding-left: 3.95rem;
+  }
+
+  .read .rec-reason {
+    margin: 0;
     font-size: 0.86rem;
     line-height: 1.75;
+  }
+
+  .read .rec-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .read .rec-link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    text-decoration: none;
+  }
+
+  .read .rec-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+
+  .read .book-group {
+    margin: 1.1rem 0 0.5rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .read .book-group:first-child {
+    margin-top: 0;
   }
 
   /* ---------- 全球新闻 ---------- */

@@ -11,6 +11,7 @@ import { parseChapters } from './chapter-parser.js';
 import { loadConfig, saveConfig, isAiReady } from './config.js';
 import { aiNews, aiNewsSummaries } from './ai.js';
 import { RECOMMENDS } from '../data/recommends.js';
+import { bookMeta } from '../data/book-meta.js';
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -111,6 +112,8 @@ let reader = null; // { meta, text, index }
 let fontSize = Number(localStorage.getItem(LS.font)) || 17;
 let bookView = 'shelf'; // shelf | recs
 let bookQuery = '';
+let recPage = 1;
+const REC_PAGE_SIZE = 5;
 
 const app = () => document.getElementById('read-app');
 
@@ -176,26 +179,68 @@ function bookCard(b) {
 }
 
 function recCard(r) {
+  const meta = bookMeta(r.title);
+  const cover = meta.cover
+    ? `<img class="rec-cover" src="${esc(meta.cover)}" alt="" loading="lazy" />`
+    : `<div class="rec-cover rec-cover-ph">${esc(r.title.slice(0, 1))}</div>`;
+
   return `
     <details class="rec">
       <summary>
-        <span class="rec-head">
-          <strong>${esc(r.title)}</strong>
-          <span class="muted small">${esc(r.author)} · ${esc(r.cat)}</span>
+        ${cover}
+        <span class="rec-text">
+          <span class="rec-head">
+            <strong>${esc(r.title)}</strong>
+            <span class="muted small">${esc(r.author)} · ${esc(r.cat)}</span>
+          </span>
+          <span class="rec-intro">${esc(r.intro)}</span>
         </span>
-        <span class="rec-intro">${esc(r.intro)}</span>
       </summary>
-      <p class="rec-reason">${esc(r.reason)}</p>
+      <div class="rec-body">
+        <p class="rec-reason">${esc(r.reason)}</p>
+        ${
+          meta.douban
+            ? `<a class="rec-link" href="${esc(meta.douban)}" target="_blank" rel="noopener noreferrer">豆瓣读书 ↗</a>`
+            : ''
+        }
+      </div>
     </details>`;
 }
 
 async function bookListHTML() {
   const q = normText(bookQuery);
 
+  /* 搜索时同时找书架和推荐 */
+  if (q) {
+    const shelf = books.filter(b => matchShelf(b, q));
+    const recs = RECOMMENDS.filter(r => matchRec(r, q));
+    if (!shelf.length && !recs.length) return `<p class="empty">没找到「${esc(bookQuery)}」</p>`;
+
+    return `
+      ${shelf.length ? `<p class="book-group">我的书架 · ${shelf.length}</p><div class="book-list">${shelf.map(bookCard).join('')}</div>` : ''}
+      ${recs.length ? `<p class="book-group">养乐多的推荐 · ${recs.length}</p><div class="rec-list">${recs.map(recCard).join('')}</div>` : ''}
+    `;
+  }
+
   if (bookView === 'recs') {
-    const list = RECOMMENDS.filter(r => matchRec(r, q));
-    if (!list.length) return `<p class="empty">推荐里没找到「${esc(bookQuery)}」</p>`;
-    return `<div class="rec-list">${list.map(recCard).join('')}</div>`;
+    const total = RECOMMENDS.length;
+    const pages = Math.max(1, Math.ceil(total / REC_PAGE_SIZE));
+    if (recPage > pages) recPage = pages;
+    if (recPage < 1) recPage = 1;
+
+    const start = (recPage - 1) * REC_PAGE_SIZE;
+    const items = RECOMMENDS.slice(start, start + REC_PAGE_SIZE);
+
+    const pager =
+      pages > 1
+        ? `<div class="rec-pager">
+             <button class="btn-ghost" data-action="rec-page" data-page="${recPage - 1}" ${recPage === 1 ? 'disabled' : ''}>← 上一页</button>
+             <span class="muted small">${recPage} / ${pages}</span>
+             <button class="btn-ghost" data-action="rec-page" data-page="${recPage + 1}" ${recPage === pages ? 'disabled' : ''}>下一页 →</button>
+           </div>`
+        : '';
+
+    return `<div class="rec-list">${items.map(recCard).join('')}</div>${pager}`;
   }
 
   const list = books.filter(b => matchShelf(b, q));
@@ -657,7 +702,12 @@ document.addEventListener('click', async e => {
       break;
     case 'book-view':
       bookView = el.dataset.view;
+      recPage = 1;
       await render();
+      break;
+    case 'rec-page':
+      recPage = Number(el.dataset.page) || 1;
+      await updateBookList();
       break;
     case 'open-ai-settings':
       openAiSettings();
@@ -694,12 +744,14 @@ document.addEventListener('compositionend', e => {
   if (e.target?.dataset?.action !== 'book-search') return;
   bookComposing = false;
   bookQuery = e.target.value;
+  recPage = 1;
   updateBookList();
 });
 
 document.addEventListener('input', e => {
   if (e.target?.dataset?.action !== 'book-search') return;
   bookQuery = e.target.value;
+  recPage = 1;
   if (bookComposing || e.isComposing) return;
   updateBookList();
 });
