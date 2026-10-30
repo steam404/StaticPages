@@ -169,7 +169,7 @@ main,
 .brand::before {
   content: '';
   display: inline-block;
-  width: 24px;
+  width: 48px;
   height: 48px;
   background: url('/sprites/toad.png') no-repeat center / contain;
   image-rendering: pixelated;
