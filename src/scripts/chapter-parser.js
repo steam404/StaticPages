@@ -49,13 +49,19 @@ const RULES = [
   },
 ];
 
-/** 去掉包裹的括号/书名号，便于匹配「【第一章】」这类写法 */
+/** 章节行前面常见的修饰：正文 第一章、VIP章节 第3章、正文卷 第五回 */
+const PREFIX_RE = /^(?:VIP章节|VIP卷|正文卷|正文|vip|VIP|Vip)\s*[:：、.．]?\s*/;
+
+/** 去掉包裹的括号/书名号，以及「正文」这类前缀，便于匹配 */
 function normalizeLine(raw) {
-  return String(raw)
+  // 括号可能在行内（【正文】第2章），一并去掉
+  let t = String(raw)
     .trim()
-    .replace(/^[【\[（(「『《]+/, '')
-    .replace(/[】\]）)」』》]+$/, '')
+    .replace(/[【】\[\]（）()「」『』《》]/g, '')
     .trim();
+
+  t = t.replace(PREFIX_RE, '').trim();
+  return t;
 }
 
 /** 这一行像不像章节标题 */
