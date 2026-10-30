@@ -19,3 +19,15 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_login_attempts_ip_ts ON login_attempts (ip, ts);
+
+-- 玩什么 页面的留言气泡
+CREATE TABLE IF NOT EXISTS bubbles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  body TEXT NOT NULL,
+  author TEXT,
+  created_at INTEGER NOT NULL,
+  ip TEXT,
+  hidden INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_bubbles_created ON bubbles (created_at);

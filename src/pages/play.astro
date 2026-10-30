@@ -65,6 +65,31 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
     </ul>
 
     <nav class="game-pager" aria-label="分页"></nav>
+
+    <section class="bubbles">
+      <div class="bubbles-head">
+        <h2>留言气泡</h2>
+        <button class="btn-ghost" type="button" data-bubble="reshuffle">换两条</button>
+      </div>
+
+      <div class="bubble-list" id="bubble-list">
+        <p class="bubble-empty">还没有人留言。</p>
+      </div>
+
+      <form class="bubble-form" id="bubble-form" hidden>
+        <input id="bubble-author" maxlength="16" placeholder="署名（可留空）" autocomplete="off" />
+        <textarea id="bubble-body" maxlength="120" rows="2" placeholder="留一句…"></textarea>
+        <div class="bubble-actions">
+          <span class="bubble-hint" id="bubble-hint"></span>
+          <button class="btn-primary" type="submit">发一条</button>
+        </div>
+      </form>
+
+      <p class="bubble-login" id="bubble-login" hidden>
+        登录后才能留言
+        <button class="btn-ghost" type="button" data-bubble="login">去登录</button>
+      </p>
+    </section>
   </div>
 </BaseLayout>
 
@@ -105,6 +130,88 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
 
     paint();
   }
+</script>
+
+<script>
+  const bubbleList = document.getElementById('bubble-list');
+  const bubbleForm = document.getElementById('bubble-form');
+  const bubbleLogin = document.getElementById('bubble-login');
+  const bubbleHint = document.getElementById('bubble-hint');
+  const authorInput = document.getElementById('bubble-author');
+  const bodyInput = document.getElementById('bubble-body');
+
+  const esc = s =>
+    String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  async function loadBubbles() {
+    if (!bubbleList) return;
+    try {
+      const res = await fetch('/api/bubbles?limit=2', { cache: 'no-store', credentials: 'same-origin' });
+      const data = await res.json();
+      const items = data.items || [];
+      bubbleList.innerHTML = items.length
+        ? items
+            .map(
+              b => `<div class="bubble">
+                      <p>${esc(b.body)}</p>
+                      ${b.author ? `<span class="bubble-by">— ${esc(b.author)}</span>` : ''}
+                    </div>`,
+            )
+            .join('')
+        : '<p class="bubble-empty">还没有人留言。</p>';
+    } catch {
+      bubbleList.innerHTML = '<p class="bubble-empty">暂时读不到留言。</p>';
+    }
+  }
+
+  async function checkLogin() {
+    try {
+      const res = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' });
+      const data = await res.json().catch(() => null);
+      const ok = res.ok && data?.ok === true;
+      if (bubbleForm) bubbleForm.hidden = !ok;
+      if (bubbleLogin) bubbleLogin.hidden = ok;
+    } catch {
+      if (bubbleForm) bubbleForm.hidden = true;
+      if (bubbleLogin) bubbleLogin.hidden = false;
+    }
+  }
+
+  bubbleForm?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const body = bodyInput.value.trim();
+    if (!body) {
+      bubbleHint.textContent = '写点什么再发';
+      return;
+    }
+
+    bubbleHint.textContent = '发送中…';
+    try {
+      const res = await fetch('/api/bubbles', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ body, author: authorInput.value.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '发送失败');
+
+      bodyInput.value = '';
+      bubbleHint.textContent = '已发送';
+      await loadBubbles();
+      setTimeout(() => (bubbleHint.textContent = ''), 2000);
+    } catch (err) {
+      bubbleHint.textContent = err.message;
+    }
+  });
+
+  document.querySelector('[data-bubble="reshuffle"]')?.addEventListener('click', loadBubbles);
+  document
+    .querySelector('[data-bubble="login"]')
+    ?.addEventListener('click', () => document.getElementById('sync-btn')?.click());
+
+  loadBubbles();
+  checkLogin();
 </script>
 
 <style is:global>
@@ -283,6 +390,100 @@ const fmt = rating => (Number.isInteger(rating) ? `${rating}.0` : String(rating)
   .steam:hover {
     border-color: var(--accent);
     text-decoration: none;
+  }
+
+  /* ---------- 留言气泡 ---------- */
+
+  .play .bubbles {
+    margin-top: 2.6rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .play .bubbles-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .play .bubbles-head h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .play .bubble-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .play .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 14px 4px;
+    padding: 0.7rem 0.9rem;
+    max-width: 36rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .play .bubble p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  .play .bubble-by {
+    display: block;
+    margin-top: 0.3rem;
+    font-size: 0.74rem;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .play .bubble-empty {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .play .bubble-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .play .bubble-form input,
+  .play .bubble-form textarea {
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+    resize: vertical;
+  }
+
+  .play .bubble-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
+
+  .play .bubble-hint {
+    margin-right: auto;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .play .bubble-login {
+    margin: 1rem 0 0;
+    font-size: 0.84rem;
+    color: var(--muted);
   }
 
   @media (max-width: 480px) {

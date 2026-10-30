@@ -8,6 +8,7 @@
 import { handleAuth } from './api/auth.js';
 import { handleSync } from './api/sync.js';
 import { handleBlob } from './api/blob.js';
+import { handleBubbles } from './api/bubbles.js';
 
 const FEEDS = [
   { id: 'bbc-zh', name: 'BBC 中文', url: 'https://feeds.bbci.co.uk/zhongwen/simp/rss.xml', lang: 'zh' },
@@ -133,7 +134,7 @@ export default {
         }
       }
 
-      for (const handler of [handleAuth, handleSync, handleBlob]) {
+      for (const handler of [handleAuth, handleSync, handleBlob, handleBubbles]) {
         const res = await handler(request, env, url);
         if (res) return res;
       }
